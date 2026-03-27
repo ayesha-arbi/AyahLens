@@ -1,7 +1,4 @@
-/* 
- * AyahLens Landing Page - Single File Component
- * Bulletproof Version: Uses explicit Hex codes to guarantee colors load.
- */
+
 
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -13,7 +10,7 @@ const customStyles = `
   
   html { 
     scroll-snap-type: y proximity; 
-    scroll-behavior: smooth; 
+    scroll-behaviour: smooth; 
   }
   
   body { 
