@@ -237,7 +237,7 @@ function Hero() {
                     </div>
                   </div>
                 </div>
-                <div className="absolute top-[4.5rem] left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#0B3D20]/80 backdrop-blur-sm text-[#C8921A] text-[.62rem] font-heading font-bold px-3 py-1 rounded-full tracking-widest border border-[#C8921A]/40">
+                <div className="absolute top-18 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#0B3D20]/80 backdrop-blur-sm text-[#C8921A] text-[.62rem] font-heading font-bold px-3 py-1 rounded-full tracking-widest border border-[#C8921A]/40">
                   🌳 TREE — 94% match
                 </div>
                 <div className="absolute top-8 left-1/2 -translate-x-1/2 text-[.5rem] text-[#E8C060]/40 font-heading tracking-widest uppercase">Feature 3 · AyahLens Camera</div>
