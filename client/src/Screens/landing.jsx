@@ -178,7 +178,7 @@ function Hero() {
       </Reveal>
 
       <Reveal variant="zoom" delay={300} as="h1" className="font-display text-center text-5xl md:text-7xl font-normal text-[#0B3D20] leading-[1.05] max-w-3xl px-4">
-        Your life →<br/><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Your Ayah.</em>
+      Find Verses That<br/><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Speaks to You</em>
       </Reveal>
       
       <Reveal variant="right" delay={450} as="p" className="font-display text-xl md:text-2xl text-[#0B3D20]/60 mt-3 mb-3" style={{ fontStyle: 'italic' }}>Point, read, grow.</Reveal>
@@ -688,7 +688,7 @@ function FeatureOnboarding() {
                     </svg>
                   </div>
                   <p className="text-[#F6E8C0] text-sm font-medium">Welcome to AyahLens!</p>
-                  <p className="text-[#F6E8C0]/60 text-[.6rem] mt-0.5">I'm Qibla — your guide 🌟</p>
+                  <p className="text-[#F6E8C0]/60 text-[.6rem] mt-0.5">I'm Koko — your guide 🌟</p>
                 </div>
                 <div className="bg-[#2E9E5A]/10 border border-[#2E9E5A]/20 rounded-xl px-3 py-2 mb-2.5 flex items-center gap-2">
                   <span className="text-[.6rem] text-[#F6E8C0]/50">Your name</span>
@@ -738,7 +738,7 @@ function FeatureOnboarding() {
               Onboarding &amp;<br/><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Settings</em>
             </h2>
             <p className="text-ink-soft leading-relaxed mb-6 text-sm md:text-base">
-              A warm, guided first experience with Qibla leading the way. The app personalises immediately from your first interaction — and gives you full control over your reading environment.
+              A warm, guided first experience with Koko leading the way. The app personalises immediately from your first interaction — and gives you full control over your reading environment.
             </p>
             <ul className="space-y-3 mb-8">
               <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Welcome flow — name, age group, favourite Surah</li>
@@ -778,14 +778,14 @@ function TechStack() {
   );
 }
 
-function QiblaSection() {
+function KokoSection() {
   return (
     <section className="snap-start py-20 relative overflow-hidden" style={{ background: '#FAF6EE' }}>
       <div className="star-tile absolute inset-0 opacity-60 pointer-events-none bg-fixed"></div>
       <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
         <Reveal variant="down">
           <p className="text-[#C8921A] text-xs font-heading uppercase tracking-widest mb-3">✦ Meet Your Guide</p>
-          <h2 className="font-display text-4xl text-[#0B3D20] font-normal mb-8">Say Salam to <em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Qibla</em></h2>
+          <h2 className="font-display text-4xl text-[#0B3D20] font-normal mb-8">Say Salam to <em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Koko</em></h2>
         </Reveal>
         <Reveal variant="zoom" delay={200} className="flex justify-center mb-8">
           <div className="relative">
@@ -919,7 +919,7 @@ export default function Landing() {
         <FeatureCommunity />
         <FeatureOnboarding />
         <TechStack />
-        <QiblaSection />
+        <KokoSection />
         <DownloadCTA />
       </main>
       <Footer />
