@@ -1,7 +1,5 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
-
+import { useNavigate } from "react-router-dom";
 // ==========================================
 // 1. GLOBAL STYLES (Injected safely)
 // ==========================================
@@ -17,7 +15,12 @@ const customStyles = `
     font-family: 'DM Sans', sans-serif; 
     background: #FAF6EE; 
     color: #18120A; 
-    overflow-x: hidden; 
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  a, button, [role="button"], .chip, .feat-card, nav a {
+    cursor: none !important;
   }
 
   body::after { 
@@ -57,7 +60,7 @@ const customStyles = `
   .tag { display:inline-flex; align-items:center; gap:5px; background:#0B3D20; color:#E8C060; border: 1px solid rgba(200,146,26,0.3); font-size:.68rem; font-weight:700; padding:3px 10px; border-radius:100px; letter-spacing:.04em; }
   .tag-gold { background:#C8921A; color:#0B3D20; border:none; }
   
-  .chip { background:rgba(11,61,32,.08); border:1px solid rgba(11,61,32,.15); color:#1B6B3C; font-size:.62rem; padding:3px 9px; border-radius:100px; cursor:pointer; transition: 0.2s all; font-weight:600; }
+  .chip { background:rgba(11,61,32,.08); border:1px solid rgba(11,61,32,.15); color:#1B6B3C; font-size:.62rem; padding:3px 9px; border-radius:100px; cursor:none; transition: 0.2s all; font-weight:600; }
   .chip.on { background:#C8921A; border-color:#C8921A; color:#0B3D20; font-weight:800; }
   
   .bar { width:36px; height:2px; background:linear-gradient(90deg,#C8921A,#E8C060); border-radius:1px; }
@@ -77,10 +80,116 @@ const customStyles = `
   .animate-pulse-ring2 { animation: pulseRing 2s ease-out infinite 0.65s; }
   .animate-pulse-ring3 { animation: pulseRing 2s ease-out infinite 1.3s; }
   .animate-blink { animation: blink 2s ease-in-out infinite; }
+
+  /* ── Custom Cursor ── */
+  #cursor-dot {
+    position: fixed;
+    top: 0; left: 0;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #C8921A;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    transition: width 0.15s ease, height 0.15s ease, background 0.2s ease;
+    will-change: transform;
+  }
+
+  #cursor-ring {
+    position: fixed;
+    top: 0; left: 0;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(200, 146, 26, 0.6);
+    pointer-events: none;
+    z-index: 99998;
+    transform: translate(-50%, -50%);
+    transition: width 0.35s cubic-bezier(0.17, 0.84, 0.44, 1),
+                height 0.35s cubic-bezier(0.17, 0.84, 0.44, 1),
+                border-color 0.3s ease,
+                background 0.3s ease;
+    will-change: transform, width, height;
+  }
+
+  #cursor-ring.is-heading {
+    width: 80px;
+    height: 80px;
+    border-color: rgba(200, 146, 26, 0.35);
+    background: rgba(200, 146, 26, 0.06);
+  }
+
+  #cursor-ring.is-link {
+    width: 52px;
+    height: 52px;
+    border-color: rgba(46, 158, 90, 0.55);
+    background: rgba(46, 158, 90, 0.05);
+  }
 `;
 
 // ==========================================
-// 2. HELPER COMPONENTS & HOOKS
+// 2. CUSTOM CURSOR COMPONENT
+// ==========================================
+
+function CustomCursor() {
+  const dotRef = useRef(null);
+  const ringRef = useRef(null);
+  const pos = useRef({ x: -100, y: -100 });
+  const ringPos = useRef({ x: -100, y: -100 });
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const dot = dotRef.current;
+    const ring = ringRef.current;
+    if (!dot || !ring) return;
+
+    const onMove = (e) => {
+      pos.current = { x: e.clientX, y: e.clientY };
+      dot.style.transform = `translate(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%))`;
+    };
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    const animate = () => {
+      ringPos.current.x = lerp(ringPos.current.x, pos.current.x, 0.12);
+      ringPos.current.y = lerp(ringPos.current.y, pos.current.y, 0.12);
+      ring.style.transform = `translate(calc(${ringPos.current.x}px - 50%), calc(${ringPos.current.y}px - 50%))`;
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    const onOver = (e) => {
+      const el = e.target;
+      if (el.matches('h1, h2, h3, h4, [class*="font-display"], em')) {
+        ring.classList.add('is-heading');
+        ring.classList.remove('is-link');
+      } else if (el.matches('a, button, .chip, [role="button"]')) {
+        ring.classList.add('is-link');
+        ring.classList.remove('is-heading');
+      } else {
+        ring.classList.remove('is-heading', 'is-link');
+      }
+    };
+
+    window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('mouseover', onOver, { passive: true });
+    rafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseover', onOver);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  return (
+    <>
+      <div id="cursor-dot" ref={dotRef} />
+      <div id="cursor-ring" ref={ringRef} />
+    </>
+  );
+}
+
+// ==========================================
+// 3. HELPER COMPONENTS & HOOKS
 // ==========================================
 
 function Reveal({ as: Component = 'div', children, className = '', style = {}, variant = 'up', delay = 0 }) {
@@ -127,11 +236,12 @@ function ChipGroup({ chips, initial, className = '' }) {
 }
 
 // ==========================================
-// 3. INTERNAL SECTIONS
+// 4. INTERNAL SECTIONS
 // ==========================================
 
 function Navbar() {
   return (
+    
     <nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-5 md:px-10 py-3.5"
          style={{ background: 'rgba(250,246,238,.9)', backdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(200,146,26,.12)' }}>
       <div className="flex items-center gap-2.5">
@@ -154,8 +264,13 @@ function Navbar() {
         <span className="hack-badge hidden sm:flex items-center gap-1.5 bg-[#F6E8C0] border border-[#C8921A]/30 text-[#C8921A] text-xs font-heading font-semibold px-3 py-1.5 rounded-full">
           🚀 Hackathon Demo
         </span>
-        <a href="#download" className="bg-[#0B3D20] text-[#E8C060] text-xs font-heading font-semibold px-4 py-2 rounded-full hover:bg-[#1B6B3C] transition-all hover:-translate-y-0.5"
-           style={{ boxShadow: '0 4px 14px rgba(11,61,32,.25)' }}>Try App</a>
+        <button
+  onClick={() => navigate("/onboarding")}
+  className="bg-[#0B3D20] text-[#E8C060] text-xs font-heading font-semibold px-4 py-2 rounded-full hover:bg-[#1B6B3C] transition-all hover:-translate-y-0.5"
+  style={{ boxShadow: '0 4px 14px rgba(11,61,32,.25)' }}
+>
+  Try App
+</button>
       </div>
     </nav>
   );
@@ -902,13 +1017,14 @@ function Footer() {
 }
 
 // ==========================================
-// 4. MAIN EXPORT
+// 5. MAIN EXPORT
 // ==========================================
-
+const navigate = useNavigate();
 export default function Landing() {
   return (
     <div className="font-body text-ink overflow-x-hidden" style={{ background: '#FAF6EE' }}>
       <style dangerouslySetInnerHTML={{ __html: customStyles }} />
+      <CustomCursor />
       <Navbar />
       <main>
         <Hero />
