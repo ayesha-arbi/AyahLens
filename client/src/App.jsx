@@ -1,14 +1,17 @@
-// If your Landing.jsx is in the exact same folder as App.jsx:
-import Landing from './Screens/landing'; 
-
-// NOTE: If you put Landing.jsx inside a 'components' folder, 
-// change the line above to: import Landing from './components/Landing';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Landing from "./Screens/landing";
+import Onboarding from "./Screens/onboarding";
+import Dashboard from "./Dashboard/dashboardmain";
 
 function App() {
   return (
-    <>
-      <Landing />
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

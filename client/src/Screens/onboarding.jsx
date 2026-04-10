@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-
+import { useNavigate } from "react-router-dom";
 // ─────────────────────────────────────────────
 // GLOBAL STYLES
 // ─────────────────────────────────────────────
@@ -1148,6 +1148,7 @@ function StepDone({ profile, onFinish, loading }) {
 // MAIN ONBOARDING COMPONENT
 // ─────────────────────────────────────────────
 export default function Onboarding() {
+
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -1183,9 +1184,10 @@ export default function Onboarding() {
 
   // ── Final submit ──
   const handleFinish = async () => {
-    setLoading(true);
-    try {
-      /*
+  setLoading(true);
+
+  try {
+    /*
         BACKEND NOTE:
         Replace the timeout below with the actual API call:
 
@@ -1210,12 +1212,20 @@ export default function Onboarding() {
           router.push('/home');   // Next.js
           navigate('/home');      // React Router
       */
-      await new Promise(r => setTimeout(r, 1800)); // placeholder delay
-      alert(`Jazakallah khair, ${profile.name || 'Friend'}! Profile saved. (Connect backend here)`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    await new Promise(r => setTimeout(r, 1800)); // fake API
+
+    // OPTIONAL: save onboarding completion
+    localStorage.setItem("onboardingDone", "true");
+
+    alert(`Jazakallah khair, ${profile.name || 'Friend'}! Profile saved.`);
+
+    // ✅ GO TO DASHBOARD
+    navigate("/dashboard");
+
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Steps config
   const steps = [

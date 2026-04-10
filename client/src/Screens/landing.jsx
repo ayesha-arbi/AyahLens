@@ -202,19 +202,19 @@ function Reveal({ as: Component = 'div', children, className = '', style = {}, v
         setIsVisible(true);
         observer.unobserve(entry.target);
       }
-    }, { 
-      threshold: 0.15, 
+    }, {
+      threshold: 0.15,
       rootMargin: '0px 0px -50px 0px'
     });
 
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
-  },[]);
+  }, []);
 
   return (
-    <Component 
-      ref={ref} 
-      className={`reveal reveal-${variant} ${isVisible ? 'in' : ''} ${className}`} 
+    <Component
+      ref={ref}
+      className={`reveal reveal-${variant} ${isVisible ? 'in' : ''} ${className}`}
       style={{ ...style, transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -240,16 +240,17 @@ function ChipGroup({ chips, initial, className = '' }) {
 // ==========================================
 
 function Navbar() {
+   const navigate = useNavigate(); // ✅ add here
   return (
-    
+
     <nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-5 md:px-10 py-3.5"
-         style={{ background: 'rgba(250,246,238,.9)', backdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(200,146,26,.12)' }}>
+      style={{ background: 'rgba(250,246,238,.9)', backdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(200,146,26,.12)' }}>
       <div className="flex items-center gap-2.5">
         <svg viewBox="0 0 40 40" className="w-9 h-9 drop-shadow-sm" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 2L24.3 15.7L38 20L24.3 24.3L20 38L15.7 24.3L2 20L15.7 15.7L20 2Z" fill="#C8921A" opacity="0.3"/>
-          <path d="M20 8L23 17L32 20L23 23L20 32L17 23L8 20L17 17L20 8Z" stroke="#0B3D20" strokeWidth="2" strokeLinejoin="round"/>
-          <circle cx="20" cy="20" r="5" stroke="#C8921A" strokeWidth="2"/>
-          <circle cx="20" cy="20" r="2" fill="#0B3D20"/>
+          <path d="M20 2L24.3 15.7L38 20L24.3 24.3L20 38L15.7 24.3L2 20L15.7 15.7L20 2Z" fill="#C8921A" opacity="0.3" />
+          <path d="M20 8L23 17L32 20L23 23L20 32L17 23L8 20L17 17L20 8Z" stroke="#0B3D20" strokeWidth="2" strokeLinejoin="round" />
+          <circle cx="20" cy="20" r="5" stroke="#C8921A" strokeWidth="2" />
+          <circle cx="20" cy="20" r="2" fill="#0B3D20" />
         </svg>
         <span className="font-heading font-bold text-lg text-[#0B3D20] tracking-tight">AyahLens</span>
       </div>
@@ -265,12 +266,12 @@ function Navbar() {
           🚀 Hackathon Demo
         </span>
         <button
-  onClick={() => navigate("/onboarding")}
-  className="bg-[#0B3D20] text-[#E8C060] text-xs font-heading font-semibold px-4 py-2 rounded-full hover:bg-[#1B6B3C] transition-all hover:-translate-y-0.5"
-  style={{ boxShadow: '0 4px 14px rgba(11,61,32,.25)' }}
->
-  Try App
-</button>
+          onClick={() => navigate("/onboarding")}
+          className="bg-[#0B3D20] text-[#E8C060] text-xs font-heading font-semibold px-4 py-2 rounded-full hover:bg-[#1B6B3C] transition-all hover:-translate-y-0.5"
+          style={{ boxShadow: '0 4px 14px rgba(11,61,32,.25)' }}
+        >
+          Try App
+        </button>
       </div>
     </nav>
   );
@@ -293,11 +294,11 @@ function Hero() {
       </Reveal>
 
       <Reveal variant="zoom" delay={300} as="h1" className="font-display text-center text-5xl md:text-7xl font-normal text-[#0B3D20] leading-[1.05] max-w-3xl px-4">
-      Find Verses That<br/><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Speaks to You</em>
+        Find Verses That<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Speaks to You</em>
       </Reveal>
-      
+
       <Reveal variant="right" delay={450} as="p" className="font-display text-xl md:text-2xl text-[#0B3D20]/60 mt-3 mb-3" style={{ fontStyle: 'italic' }}>Point, read, grow.</Reveal>
-      
+
       <Reveal variant="up" delay={550} as="p" className="text-sm md:text-base text-[#8A7A60] max-w-lg text-center leading-relaxed px-5 mb-8">
         AyahLens meets you exactly where you are — through your mood, your life situation, or even what your camera sees — and guides you with personalised Quran verses &amp; Hadiths.
       </Reveal>
@@ -336,7 +337,7 @@ function Hero() {
                 <div className="absolute bottom-5 right-7 w-8 h-8 border-b-2 border-r-2 border-[#C8921A]/60 rounded-br-xl"></div>
                 <div className="absolute inset-0 flex items-center justify-center opacity-30">
                   <svg viewBox="0 0 120 160" className="w-28 h-36" fill="#1B6B3C">
-                    <ellipse cx="60" cy="55" rx="36" ry="42"/><ellipse cx="42" cy="75" rx="28" ry="33"/><ellipse cx="78" cy="70" rx="30" ry="36"/><rect x="54" y="112" width="12" height="48"/>
+                    <ellipse cx="60" cy="55" rx="36" ry="42" /><ellipse cx="42" cy="75" rx="28" ry="33" /><ellipse cx="78" cy="70" rx="30" ry="36" /><rect x="54" y="112" width="12" height="48" />
                   </svg>
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -385,7 +386,7 @@ function Hero() {
               </div>
               <div className="flex items-center gap-1.5 bg-[#2E9E5A]/20 rounded-xl px-2.5 py-1.5 mb-2">
                 <div className="w-5 h-5 rounded-full bg-[#C8921A] flex items-center justify-center">
-                  <svg className="w-2.5 h-2.5" fill="#0B3D20" viewBox="0 0 10 10"><polygon points="3,1 9,5 3,9"/></svg>
+                  <svg className="w-2.5 h-2.5" fill="#0B3D20" viewBox="0 0 10 10"><polygon points="3,1 9,5 3,9" /></svg>
                 </div>
                 <div className="flex-1 h-1 bg-[#2E9E5A]/30 rounded-full"><div className="w-2/5 h-full bg-[#C8921A] rounded-full"></div></div>
                 <span className="text-[.5rem] text-[#F6E8C0]/50">2:14</span>
@@ -439,7 +440,7 @@ function FeatureMood() {
               <div className="bar"></div>
             </div>
             <h2 className="font-display text-4xl md:text-5xl text-[#0B3D20] font-normal leading-tight mb-4">
-              Mood &amp;<br/><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Situation Entry</em>
+              Mood &amp;<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Situation Entry</em>
             </h2>
             <p className="text-[#8A7A60] leading-relaxed mb-6 text-sm md:text-base">
               Tell AyahLens how you're feeling — tap a quick mood chip or write freely in plain text. "I just had a fight with my spouse." "My exam is tomorrow and I'm terrified." Even voice input is supported. In seconds, you receive a matched Ayah + Hadith with a clear, short explanation.
@@ -475,7 +476,7 @@ function FeatureMood() {
                 </div>
                 <div className="bg-[#2E9E5A]/10 border border-[#2E9E5A]/20 rounded-xl px-3 py-2 mb-4 flex items-center gap-2">
                   <p className="text-[#F6E8C0]/60 text-[.65rem] flex-1 italic">"I just fought with my spouse…"</p>
-                  <svg className="w-4 h-4 text-[#C8921A]/50" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1.5"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9l3-3 3 3M10 6v8"/></svg>
+                  <svg className="w-4 h-4 text-[#C8921A]/50" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1.5"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9l3-3 3 3M10 6v8" /></svg>
                 </div>
                 <div className="vcard p-3.5 flex-1 flex flex-col justify-between">
                   <div>
@@ -532,7 +533,7 @@ function FeatureJourney() {
                 </div>
                 <div className="flex items-center gap-2 bg-[#2E9E5A]/10 rounded-xl px-3 py-2 mb-3">
                   <button className="w-7 h-7 rounded-full bg-[#C8921A] flex items-center justify-center shrink-0">
-                    <svg className="w-3 h-3" fill="#0B3D20" viewBox="0 0 10 10"><polygon points="3,1 9,5 3,9"/></svg>
+                    <svg className="w-3 h-3" fill="#0B3D20" viewBox="0 0 10 10"><polygon points="3,1 9,5 3,9" /></svg>
                   </button>
                   <div className="flex-1"><div className="h-1 bg-[#2E9E5A]/30 rounded-full mb-0.5"><div className="w-2/5 h-full bg-[#C8921A] rounded-full"></div></div></div>
                   <span className="text-[.5rem] text-[#F6E8C0]/60 shrink-0">Al-Husary</span>
@@ -552,7 +553,7 @@ function FeatureJourney() {
               <div className="bar"></div>
             </div>
             <h2 className="font-display text-4xl md:text-5xl text-[#0B3D20] font-normal leading-tight mb-4">
-              Personalised<br/><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Reading Journey</em>
+              Personalised<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Reading Journey</em>
             </h2>
             <p className="text-ink-soft leading-relaxed mb-6 text-sm md:text-base">
               A beautiful full-screen reader that remembers you. Arabic text, translation, simple tafsir, and audio recitation — all in one screen. After each verse, the app suggests your next one based on your mood history and what you've already read.
@@ -630,7 +631,7 @@ function FeatureLens() {
             </div>
             <div className="flex items-start gap-3 bg-[#C8921A]/10 border border-[#C8921A]/30 rounded-2xl p-4">
               <svg className="w-5 h-5 text-[#C8921A] shrink-0 mt-0.5" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <path strokeLinecap="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
                 <p className="text-[#E8C060] text-xs font-bold mb-0.5">100% On-Device — No Internet Required</p>
@@ -646,7 +647,7 @@ function FeatureLens() {
                 <div className="relative flex-1 bg-fixed" style={{ background: 'linear-gradient(160deg,#050e07,#0d2a14)' }}>
                   <div className="absolute inset-0 flex items-center justify-center opacity-25 pointer-events-none">
                     <svg viewBox="0 0 120 80" className="w-32 h-24" fill="#2E9E5A">
-                      <path d="M10 40 Q30 10 60 25 Q90 10 110 40 Q90 35 60 40 Q30 35 10 40z"/><ellipse cx="60" cy="42" rx="8" ry="5"/>
+                      <path d="M10 40 Q30 10 60 25 Q90 10 110 40 Q90 35 60 40 Q30 35 10 40z" /><ellipse cx="60" cy="42" rx="8" ry="5" />
                     </svg>
                   </div>
                   <div className="absolute top-7 left-7 w-9 h-9 border-t-2 border-l-2 border-[#C8921A]/60 rounded-tl-xl"></div>
@@ -703,7 +704,7 @@ function FeatureCommunity() {
               <div className="bar"></div>
             </div>
             <h2 className="font-display text-4xl md:text-5xl text-[#0B3D20] font-normal leading-tight mb-4">
-              Community<br/><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Feed & Sharing</em>
+              Community<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Feed & Sharing</em>
             </h2>
             <p className="text-ink-soft leading-relaxed mb-6 text-sm md:text-base">
               Share your faith moments with friends and see their journeys in a warm, real-time feed. Not a debate forum — just lived spiritual experiences, shared with love. Built on Firebase Firestore for real-time updates.
@@ -788,17 +789,17 @@ function FeatureOnboarding() {
                 <div className="text-center mb-4">
                   <div className="flex justify-center mb-2">
                     <svg viewBox="0 0 60 60" className="w-14 h-14 animate-float" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="30" cy="22" r="14" fill="#8B7355"/>
-                      <circle cx="30" cy="24" r="11" fill="#9E8464"/>
-                      <circle cx="25" cy="24" r="5" fill="#F5F0E8"/><circle cx="35" cy="24" r="5" fill="#F5F0E8"/>
-                      <circle cx="25" cy="24" r="3.5" fill="#C8921A"/><circle cx="35" cy="24" r="3.5" fill="#C8921A"/>
-                      <circle cx="25" cy="24" r="1.8" fill="#18120A"/><circle cx="35" cy="24" r="1.8" fill="#18120A"/>
-                      <circle cx="23.5" cy="22.5" r=".9" fill="white"/><circle cx="33.5" cy="22.5" r=".9" fill="white"/>
-                      <ellipse cx="30" cy="29" rx="2.2" ry="1.3" fill="#c9706a"/>
-                      <ellipse cx="20" cy="26" rx="5" ry="3.5" fill="#9E8464" opacity=".5"/>
-                      <ellipse cx="40" cy="26" rx="5" ry="3.5" fill="#9E8464" opacity=".5"/>
-                      <ellipse cx="19" cy="13" rx="5" ry="4.5" fill="#8B7355" transform="rotate(-18 19 13)"/>
-                      <ellipse cx="41" cy="13" rx="5" ry="4.5" fill="#8B7355" transform="rotate(18 41 13)"/>
+                      <circle cx="30" cy="22" r="14" fill="#8B7355" />
+                      <circle cx="30" cy="24" r="11" fill="#9E8464" />
+                      <circle cx="25" cy="24" r="5" fill="#F5F0E8" /><circle cx="35" cy="24" r="5" fill="#F5F0E8" />
+                      <circle cx="25" cy="24" r="3.5" fill="#C8921A" /><circle cx="35" cy="24" r="3.5" fill="#C8921A" />
+                      <circle cx="25" cy="24" r="1.8" fill="#18120A" /><circle cx="35" cy="24" r="1.8" fill="#18120A" />
+                      <circle cx="23.5" cy="22.5" r=".9" fill="white" /><circle cx="33.5" cy="22.5" r=".9" fill="white" />
+                      <ellipse cx="30" cy="29" rx="2.2" ry="1.3" fill="#c9706a" />
+                      <ellipse cx="20" cy="26" rx="5" ry="3.5" fill="#9E8464" opacity=".5" />
+                      <ellipse cx="40" cy="26" rx="5" ry="3.5" fill="#9E8464" opacity=".5" />
+                      <ellipse cx="19" cy="13" rx="5" ry="4.5" fill="#8B7355" transform="rotate(-18 19 13)" />
+                      <ellipse cx="41" cy="13" rx="5" ry="4.5" fill="#8B7355" transform="rotate(18 41 13)" />
                       <text x="26" y="10" fontSize="6" fill="#C8921A">✦</text>
                     </svg>
                   </div>
@@ -818,7 +819,7 @@ function FeatureOnboarding() {
                   <p className="text-[.55rem] text-[#F6E8C0]/60 mb-1.5">Favourite Surah</p>
                   <div className="bg-[#2E9E5A]/10 border border-[#2E9E5A]/20 rounded-xl px-3 py-2 flex items-center justify-between">
                     <span className="text-[#F6E8C0]/90 text-[.62rem]">Al-Fatiha</span>
-                    <svg className="w-3 h-3 text-[#F6E8C0]/50" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="2"><path d="M3 4.5l3 3 3-3"/></svg>
+                    <svg className="w-3 h-3 text-[#F6E8C0]/50" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="2"><path d="M3 4.5l3 3 3-3" /></svg>
                   </div>
                 </div>
                 <div className="flex gap-2 mb-3">
@@ -850,7 +851,7 @@ function FeatureOnboarding() {
               <div className="bar"></div>
             </div>
             <h2 className="font-display text-4xl md:text-5xl text-[#0B3D20] font-normal leading-tight mb-4">
-              Onboarding &amp;<br/><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Settings</em>
+              Onboarding &amp;<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Settings</em>
             </h2>
             <p className="text-ink-soft leading-relaxed mb-6 text-sm md:text-base">
               A warm, guided first experience with Koko leading the way. The app personalises immediately from your first interaction — and gives you full control over your reading environment.
@@ -906,41 +907,41 @@ function KokoSection() {
           <div className="relative">
             <div className="absolute inset-0 rounded-full opacity-20" style={{ background: 'radial-gradient(ellipse, rgba(200,146,26,.5), transparent 70%)', filter: 'blur(24px)', transform: 'scale(1.6)' }}></div>
             <svg viewBox="0 0 200 200" className="w-52 h-52 animate-float drop-shadow-2xl" xmlns="http://www.w3.org/2000/svg">
-              <ellipse cx="100" cy="160" rx="46" ry="38" fill="#8B7355"/>
-              <ellipse cx="100" cy="168" rx="30" ry="26" fill="#C4A882"/>
-              <path d="M146 155 Q170 144 166 124 Q162 106 150 126" fill="#8B7355" stroke="#6B5840" strokeWidth="1.5"/>
-              <path d="M149 148 Q168 137 164 120" fill="none" stroke="#6B5840" strokeWidth="2.8"/>
-              <circle cx="100" cy="84" r="48" fill="#8B7355"/>
-              <circle cx="100" cy="88" r="36" fill="#9E8464"/>
-              <path d="M80 62 Q84 52 88 60" fill="none" stroke="#6B5840" strokeWidth="3" strokeLinecap="round"/>
-              <path d="M116 62 Q120 52 124 60" fill="none" stroke="#6B5840" strokeWidth="3" strokeLinecap="round"/>
-              <path d="M97 54 Q100 44 103 54" fill="none" stroke="#6B5840" strokeWidth="2.2"/>
-              <ellipse cx="66" cy="50" rx="16" ry="14" fill="#8B7355" transform="rotate(-20 66 50)"/>
-              <ellipse cx="134" cy="50" rx="16" ry="14" fill="#8B7355" transform="rotate(20 134 50)"/>
-              <ellipse cx="66" cy="50" rx="8" ry="7" fill="#c9a070" transform="rotate(-20 66 50)"/>
-              <ellipse cx="134" cy="50" rx="8" ry="7" fill="#c9a070" transform="rotate(20 134 50)"/>
-              <circle cx="84" cy="88" r="14" fill="#F5F0E8"/>
-              <circle cx="116" cy="88" r="14" fill="#F5F0E8"/>
-              <circle cx="84" cy="88" r="10" fill="#C8921A"/>
-              <circle cx="116" cy="88" r="10" fill="#C8921A"/>
-              <circle cx="84" cy="88" r="5.5" fill="#18120A"/>
-              <circle cx="116" cy="88" r="5.5" fill="#18120A"/>
-              <circle cx="80" cy="84" r="2.5" fill="white"/>
-              <circle cx="112" cy="84" r="2.5" fill="white"/>
-              <ellipse cx="100" cy="100" rx="6" ry="4" fill="#c9706a"/>
-              <path d="M91 108 Q100 115 109 108" fill="none" stroke="#9a5a58" strokeWidth="2" strokeLinecap="round"/>
-              <line x1="44" y1="96" x2="82" y2="102" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8"/>
-              <line x1="40" y1="106" x2="82" y2="106" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8"/>
-              <line x1="118" y1="102" x2="156" y2="96" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8"/>
-              <line x1="118" y1="106" x2="160" y2="106" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8"/>
-              <ellipse cx="62" cy="100" rx="18" ry="13" fill="#9E8464" opacity=".5"/>
-              <ellipse cx="138" cy="100" rx="18" ry="13" fill="#9E8464" opacity=".5"/>
-              <rect x="72" y="172" rx="5" ry="5" width="56" height="36" fill="#0B3D20"/>
-              <rect x="76" y="176" rx="3" ry="3" width="48" height="28" fill="#1B6B3C"/>
-              <line x1="100" y1="178" x2="100" y2="202" stroke="#C8921A" strokeWidth="1.2"/>
-              <line x1="84" y1="184" x2="116" y2="184" stroke="#C8921A" strokeWidth=".7" opacity=".6"/>
-              <line x1="84" y1="190" x2="116" y2="190" stroke="#C8921A" strokeWidth=".7" opacity=".6"/>
-              <line x1="84" y1="196" x2="116" y2="196" stroke="#C8921A" strokeWidth=".7" opacity=".6"/>
+              <ellipse cx="100" cy="160" rx="46" ry="38" fill="#8B7355" />
+              <ellipse cx="100" cy="168" rx="30" ry="26" fill="#C4A882" />
+              <path d="M146 155 Q170 144 166 124 Q162 106 150 126" fill="#8B7355" stroke="#6B5840" strokeWidth="1.5" />
+              <path d="M149 148 Q168 137 164 120" fill="none" stroke="#6B5840" strokeWidth="2.8" />
+              <circle cx="100" cy="84" r="48" fill="#8B7355" />
+              <circle cx="100" cy="88" r="36" fill="#9E8464" />
+              <path d="M80 62 Q84 52 88 60" fill="none" stroke="#6B5840" strokeWidth="3" strokeLinecap="round" />
+              <path d="M116 62 Q120 52 124 60" fill="none" stroke="#6B5840" strokeWidth="3" strokeLinecap="round" />
+              <path d="M97 54 Q100 44 103 54" fill="none" stroke="#6B5840" strokeWidth="2.2" />
+              <ellipse cx="66" cy="50" rx="16" ry="14" fill="#8B7355" transform="rotate(-20 66 50)" />
+              <ellipse cx="134" cy="50" rx="16" ry="14" fill="#8B7355" transform="rotate(20 134 50)" />
+              <ellipse cx="66" cy="50" rx="8" ry="7" fill="#c9a070" transform="rotate(-20 66 50)" />
+              <ellipse cx="134" cy="50" rx="8" ry="7" fill="#c9a070" transform="rotate(20 134 50)" />
+              <circle cx="84" cy="88" r="14" fill="#F5F0E8" />
+              <circle cx="116" cy="88" r="14" fill="#F5F0E8" />
+              <circle cx="84" cy="88" r="10" fill="#C8921A" />
+              <circle cx="116" cy="88" r="10" fill="#C8921A" />
+              <circle cx="84" cy="88" r="5.5" fill="#18120A" />
+              <circle cx="116" cy="88" r="5.5" fill="#18120A" />
+              <circle cx="80" cy="84" r="2.5" fill="white" />
+              <circle cx="112" cy="84" r="2.5" fill="white" />
+              <ellipse cx="100" cy="100" rx="6" ry="4" fill="#c9706a" />
+              <path d="M91 108 Q100 115 109 108" fill="none" stroke="#9a5a58" strokeWidth="2" strokeLinecap="round" />
+              <line x1="44" y1="96" x2="82" y2="102" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8" />
+              <line x1="40" y1="106" x2="82" y2="106" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8" />
+              <line x1="118" y1="102" x2="156" y2="96" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8" />
+              <line x1="118" y1="106" x2="160" y2="106" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8" />
+              <ellipse cx="62" cy="100" rx="18" ry="13" fill="#9E8464" opacity=".5" />
+              <ellipse cx="138" cy="100" rx="18" ry="13" fill="#9E8464" opacity=".5" />
+              <rect x="72" y="172" rx="5" ry="5" width="56" height="36" fill="#0B3D20" />
+              <rect x="76" y="176" rx="3" ry="3" width="48" height="28" fill="#1B6B3C" />
+              <line x1="100" y1="178" x2="100" y2="202" stroke="#C8921A" strokeWidth="1.2" />
+              <line x1="84" y1="184" x2="116" y2="184" stroke="#C8921A" strokeWidth=".7" opacity=".6" />
+              <line x1="84" y1="190" x2="116" y2="190" stroke="#C8921A" strokeWidth=".7" opacity=".6" />
+              <line x1="84" y1="196" x2="116" y2="196" stroke="#C8921A" strokeWidth=".7" opacity=".6" />
               <text x="86" y="35" fontSize="14" fill="#C8921A">✦</text>
               <text x="108" y="30" fontSize="9" fill="#E8C060" opacity=".7">✦</text>
               <text x="74" y="44" fontSize="7" fill="#C8921A" opacity=".5">✦</text>
@@ -974,7 +975,7 @@ function DownloadCTA() {
     <section id="download" className="snap-start py-24 md:py-32 text-center relative overflow-hidden bg-[#0B3D20]">
       <div className="star-tile absolute inset-0 pointer-events-none bg-fixed" style={{ filter: 'invert(1)', opacity: 0.07 }}></div>
       <div className="absolute inset-0 pointer-events-none bg-fixed" style={{ background: 'radial-gradient(ellipse 55% 50% at 50% 50%, rgba(200,146,26,.1), transparent 70%)' }}></div>
-      
+
       <div className="max-w-2xl mx-auto px-6 relative z-10">
         <Reveal variant="down" className="font-arabic text-2xl text-[#C8921A]/35 mb-5" style={{ direction: 'rtl' }}>ٱقْرَأْ بِٱسْمِ رَبِّكَ</Reveal>
         <Reveal variant="blur" delay={200} className="flex justify-center mb-4">
@@ -983,7 +984,7 @@ function DownloadCTA() {
           </span>
         </Reveal>
         <Reveal variant="zoom" delay={400} as="h2" className="font-display text-5xl md:text-6xl font-normal text-[#E8C060] leading-tight mb-5">
-          Try AyahLens<br/><em style={{ fontStyle: 'italic', color: '#F6E8C0' }}>today.</em>
+          Try AyahLens<br /><em style={{ fontStyle: 'italic', color: '#F6E8C0' }}>today.</em>
         </Reveal>
         <Reveal variant="up" delay={600} as="p" className="text-[#F6E8C0]/70 mb-10 leading-relaxed text-sm md:text-base max-w-lg mx-auto">
           All 5 features. Demo-ready. Built in a week for a hackathon — with genuine love for the Muslim community.
@@ -1011,7 +1012,7 @@ function Footer() {
     <footer className="snap-start py-8 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-[#C8921A]/10 bg-[#0B3D20]">
       <div className="font-heading font-bold text-[#E8C060] text-lg">AyahLens ✦</div>
       <div className="text-[#F6E8C0]/40 text-xs text-center">Built with ❤️ for the Muslim community · Hackathon 2026</div>
-      <div className="font-arabic text-[#C8921A]/30 text-base" style={{ direction: 'rtl' }}>بِسْمِ ٱللَّهِ</div> 
+      <div className="font-arabic text-[#C8921A]/30 text-base" style={{ direction: 'rtl' }}>بِسْمِ ٱللَّهِ</div>
     </footer>
   );
 }
@@ -1019,8 +1020,8 @@ function Footer() {
 // ==========================================
 // 5. MAIN EXPORT
 // ==========================================
-const navigate = useNavigate();
 export default function Landing() {
+  const navigate = useNavigate();
   return (
     <div className="font-body text-ink overflow-x-hidden" style={{ background: '#FAF6EE' }}>
       <style dangerouslySetInnerHTML={{ __html: customStyles }} />
