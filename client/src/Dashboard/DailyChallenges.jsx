@@ -1,117 +1,56 @@
 import React, { useState } from "react";
+import {
+  BookOpen, Smile, Camera, Globe, PenLine,
+  Headphones, Heart, Trophy, Star, Medal,
+  CheckCircle, Circle, BarChart2,
+} from "lucide-react";
 
-// BACKEND: Daily challenges generated/scheduled via Firebase Cloud Functions (CRON)
-// Collection: /challenges/{date}  → refreshed daily at midnight UTC
+// BACKEND: Daily challenges from Firestore /challenges/{date}
+// Refreshed daily at midnight via Firebase Cloud Functions CRON
 // User progress: /users/{uid}/challenge_progress/{date}
-// API: GET /api/challenges/today → returns list with user completion status
 
 const CHALLENGES = [
-  {
-    id: "c1",
-    icon: "📖",
-    title: "Read 3 Verses",
-    desc: "Complete your daily reading quota",
-    pts: "+20 pts",
-    done: true,
-    progress: 3, total: 3,
-    category: "reading",
-  },
-  {
-    id: "c2",
-    icon: "😌",
-    title: "Log Your Mood",
-    desc: "Record how you feel and get a matched verse",
-    pts: "+10 pts",
-    done: true,
-    progress: 1, total: 1,
-    category: "mood",
-  },
-  {
-    id: "c3",
-    icon: "📷",
-    title: "AyahLens Scan",
-    desc: "Point your camera at something in nature",
-    pts: "+15 pts",
-    done: false,
-    progress: 0, total: 1,
-    category: "lens",
-  },
-  {
-    id: "c4",
-    icon: "🌐",
-    title: "Share a Moment",
-    desc: "Post a verse discovery to your community feed",
-    pts: "+10 pts",
-    done: false,
-    progress: 0, total: 1,
-    category: "community",
-  },
-  {
-    id: "c5",
-    icon: "✍",
-    title: "Write a Reflection",
-    desc: "Add a personal reflection to any verse you've read",
-    pts: "+15 pts",
-    done: false,
-    progress: 0, total: 1,
-    category: "reading",
-  },
-  {
-    id: "c6",
-    icon: "🎧",
-    title: "Listen to Recitation",
-    desc: "Listen to at least 2 minutes of Quran audio",
-    pts: "+10 pts",
-    done: false,
-    progress: 0, total: 1,
-    category: "reading",
-  },
-  {
-    id: "c7",
-    icon: "👥",
-    title: "Like a Friend's Post",
-    desc: "Engage with your community today",
-    pts: "+5 pts",
-    done: true,
-    progress: 1, total: 1,
-    category: "community",
-  },
-  {
-    id: "c8",
-    icon: "🏆",
-    title: "Weekly Challenge",
-    desc: "Read from 3 different Surahs today",
-    pts: "+50 pts",
-    done: false,
-    progress: 1, total: 3,
-    category: "special",
-    isSpecial: true,
-  },
+  { id: "c1", icon: <BookOpen size={18} />,   title: "Read 3 Verses",        desc: "Complete your daily reading quota",            pts: 20, done: true,  progress: 3, total: 3, special: false },
+  { id: "c2", icon: <Smile size={18} />,      title: "Log Your Mood",        desc: "Record how you feel and get a matched verse",  pts: 10, done: true,  progress: 1, total: 1, special: false },
+  { id: "c3", icon: <Camera size={18} />,     title: "AyahLens Scan",        desc: "Point your camera at something in nature",     pts: 15, done: false, progress: 0, total: 1, special: false },
+  { id: "c4", icon: <Globe size={18} />,      title: "Share a Moment",       desc: "Post a verse discovery to the community feed", pts: 10, done: false, progress: 0, total: 1, special: false },
+  { id: "c5", icon: <PenLine size={18} />,    title: "Write a Reflection",   desc: "Add a personal reflection to any verse",       pts: 15, done: false, progress: 0, total: 1, special: false },
+  { id: "c6", icon: <Headphones size={18} />, title: "Listen to Recitation", desc: "Listen to at least 2 minutes of Quran audio",  pts: 10, done: false, progress: 0, total: 1, special: false },
+  { id: "c7", icon: <Heart size={18} />,      title: "Like a Friend's Post", desc: "Engage with your community today",             pts: 5,  done: true,  progress: 1, total: 1, special: false },
+  { id: "c8", icon: <Trophy size={18} />,     title: "Weekly Challenge",     desc: "Read from 3 different Surahs today",           pts: 50, done: false, progress: 1, total: 3, special: true  },
+];
+
+const BADGES = [
+  { icon: <Star size={18} />,     label: "First Verse",  earned: true  },
+  { icon: <Trophy size={18} />,   label: "7-Day Streak", earned: true  },
+  { icon: <BookOpen size={18} />, label: "100 Verses",   earned: true  },
+  { icon: <Camera size={18} />,   label: "First Scan",   earned: true  },
+  { icon: <Globe size={18} />,    label: "First Friend", earned: true  },
+  { icon: <PenLine size={18} />,  label: "Reflector",    earned: true  },
+  { icon: <Medal size={18} />,    label: "Top 10%",      earned: true  },
+  { icon: <Headphones size={18}/>,label: "Night Reader", earned: true  },
+  { icon: <CheckCircle size={18}/>,label: "Consistent",  earned: true  },
+  { icon: <Trophy size={18} />,   label: "30 Days",      earned: false },
+  { icon: <BookOpen size={18} />, label: "500 Verses",   earned: false },
+  { icon: <Heart size={18} />,    label: "Sharer",       earned: false },
 ];
 
 export default function DailyChallenges() {
   const [challenges, setChallenges] = useState(CHALLENGES);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter]         = useState("all");
 
-  const total  = challenges.length;
-  const done   = challenges.filter((c) => c.done).length;
-  const ptsEarned = challenges.filter((c) => c.done).reduce((acc, c) => acc + parseInt(c.pts), 0);
-  const ptsTotal  = challenges.reduce((acc, c) => acc + parseInt(c.pts), 0);
+  const done      = challenges.filter((c) => c.done).length;
+  const total     = challenges.length;
+  const ptsEarned = challenges.filter((c) => c.done).reduce((a, c) => a + c.pts, 0);
+  const ptsTotal  = challenges.reduce((a, c) => a + c.pts, 0);
   const progress  = Math.round((done / total) * 100);
 
-  const filtered = filter === "all"
-    ? challenges
-    : filter === "done"
-    ? challenges.filter((c) => c.done)
-    : challenges.filter((c) => !c.done);
+  const filtered = filter === "all" ? challenges : filter === "done" ? challenges.filter((c) => c.done) : challenges.filter((c) => !c.done);
 
   const handleComplete = (id) => {
     // BACKEND: POST /api/challenges/complete  body: { challengeId, userId }
-    // Updates /users/{uid}/challenge_progress/{date} in Firestore
-    // Cloud Function: recalculates total points, unlocks badges, updates streak
-    setChallenges((prev) =>
-      prev.map((c) => c.id === id ? { ...c, done: true, progress: c.total } : c)
-    );
+    // Cloud Function: recalculates points, unlocks badges, updates streak in Firestore
+    setChallenges((prev) => prev.map((c) => c.id === id ? { ...c, done: true, progress: c.total } : c));
   };
 
   return (
@@ -121,41 +60,27 @@ export default function DailyChallenges() {
         <p>Complete today's challenges to earn points, unlock badges, and build your streak.</p>
       </div>
 
-      {/* Stats */}
-      <div className="al-stats-row" style={{ marginBottom: 22 }}>
-        <div className="al-stat-card">
-          <div className="al-stat-label">Today's Progress</div>
-          <div className="al-stat-value">{done}/{total}</div>
-          <div className="al-stat-sub">challenges done</div>
-          <div className="al-stat-icon">✦</div>
-        </div>
-        <div className="al-stat-card">
-          <div className="al-stat-label">Points Earned</div>
-          <div className="al-stat-value">{ptsEarned}</div>
-          <div className="al-stat-sub">of {ptsTotal} possible</div>
-          <div className="al-stat-icon">🏆</div>
-        </div>
-        <div className="al-stat-card">
-          <div className="al-stat-label">All-time Points</div>
-          <div className="al-stat-value">1,840</div>
-          <div className="al-stat-sub">rank: Top 12%</div>
-          <div className="al-stat-icon">⭐</div>
-        </div>
-        <div className="al-stat-card">
-          <div className="al-stat-label">Badges Earned</div>
-          <div className="al-stat-value">9</div>
-          <div className="al-stat-sub">2 new this week</div>
-          <div className="al-stat-icon">🎖</div>
-        </div>
+      <div className="al-stats-row">
+        {[
+          { label: "Today's Progress", value: `${done}/${total}`, sub: "challenges done",  icon: <CheckCircle size={18} /> },
+          { label: "Points Earned",    value: ptsEarned,          sub: `of ${ptsTotal} possible`, icon: <Trophy size={18} /> },
+          { label: "All-time Points",  value: "1,840",            sub: "rank: Top 12%",    icon: <Star size={18} /> },
+          { label: "Badges Earned",    value: "9",                sub: "2 new this week",  icon: <Medal size={18} /> },
+        ].map((s) => (
+          <div key={s.label} className="al-stat-card">
+            <div className="al-stat-label">{s.label}</div>
+            <div className="al-stat-value">{s.value}</div>
+            <div className="al-stat-sub">{s.sub}</div>
+            <div className="al-stat-icon">{s.icon}</div>
+          </div>
+        ))}
       </div>
 
       <div className="al-two-col">
-        {/* Challenges list */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Overall progress */}
           <div className="al-card">
             <div className="al-card-header">
-              <span className="al-card-title">Today — {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}</span>
+              <span className="al-card-title">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: "var(--gold)", fontFamily: "'Syne', sans-serif" }}>{progress}% done</span>
             </div>
             <div className="al-card-body">
@@ -163,33 +88,29 @@ export default function DailyChallenges() {
                 <div className="al-progress-fill" style={{ width: `${progress}%` }} />
               </div>
               <p style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>
-                {total - done} challenges remaining · {ptsTotal - ptsEarned} pts left to earn today
+                {total - done} remaining · {ptsTotal - ptsEarned} pts left to earn
               </p>
             </div>
           </div>
 
-          {/* Filter */}
           <div className="al-chips">
             {["all","remaining","done"].map((f) => (
               <span key={f} className={`al-chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
-                {f === "all" ? "All challenges" : f === "done" ? "Completed ✓" : "Remaining"}
+                {f === "all" ? "All challenges" : f === "done" ? "Completed" : "Remaining"}
               </span>
             ))}
           </div>
 
-          {/* Challenges */}
           <div className="al-card">
             {filtered.map((c) => (
               <div key={c.id} className="al-challenge" style={{ padding: "12px 20px" }}>
-                <div
-                  className="al-ch-icon"
-                  style={c.isSpecial ? { background: "rgba(200,146,26,.12)", border: "1px solid rgba(200,146,26,.2)" } : {}}
-                >
+                <div className="al-ch-icon" style={c.special ? { background: "rgba(200,146,26,.12)", border: "1px solid rgba(200,146,26,.2)", color: "var(--gold)" } : { color: "var(--green-mid)" }}>
                   {c.icon}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="al-ch-title" style={c.done ? { textDecoration: "line-through", opacity: .55 } : {}}>
-                    {c.title} {c.isSpecial && <span style={{ fontSize: 9, background: "rgba(200,146,26,.15)", color: "var(--gold)", padding: "1px 6px", borderRadius: 99, fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>WEEKLY</span>}
+                  <div className="al-ch-title" style={c.done ? { textDecoration: "line-through", opacity: .5 } : {}}>
+                    {c.title}
+                    {c.special && <span style={{ fontSize: 9, background: "rgba(200,146,26,.15)", color: "var(--gold)", padding: "1px 6px", borderRadius: 99, fontFamily: "'Syne', sans-serif", fontWeight: 700, marginLeft: 6 }}>WEEKLY</span>}
                   </div>
                   <div className="al-ch-sub">{c.desc}</div>
                   {!c.done && c.total > 1 && (
@@ -202,16 +123,15 @@ export default function DailyChallenges() {
                   )}
                 </div>
                 {c.done ? (
-                  <span className="al-ch-pts done">✓ {c.pts}</span>
+                  <span className="al-ch-pts done" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <CheckCircle size={11} /> +{c.pts} pts
+                  </span>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
-                    <span className="al-ch-pts">{c.pts}</span>
-                    <button
-                      className="al-btn sm ghost"
-                      onClick={() => handleComplete(c.id)}
-                      style={{ fontSize: 10 }}
-                    >
-                      Mark done
+                    <span className="al-ch-pts">+{c.pts} pts</span>
+                    <button className="al-btn sm ghost" onClick={() => handleComplete(c.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10 }}>
+                      <Circle size={10} /> Mark done
                     </button>
                   </div>
                 )}
@@ -220,43 +140,19 @@ export default function DailyChallenges() {
           </div>
         </div>
 
-        {/* Right: badges + leaderboard */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Badges */}
           <div className="al-card">
             <div className="al-card-header">
-              <span className="al-card-title">🎖 Badges</span>
+              <Medal size={15} color="var(--gold)" />
+              <span className="al-card-title">Badges</span>
               <span className="al-card-tag">9 earned</span>
             </div>
             <div className="al-card-body">
-              {/* BACKEND: Badges stored in /users/{uid}/badges, triggered by Cloud Functions */}
+              {/* BACKEND: Badges triggered by Cloud Functions on milestone events */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-                {[
-                  { emoji: "🌟", label: "First Verse",  earned: true },
-                  { emoji: "🔥", label: "7-Day Streak", earned: true },
-                  { emoji: "📖", label: "100 Verses",   earned: true },
-                  { emoji: "📷", label: "First Scan",   earned: true },
-                  { emoji: "👥", label: "First Friend", earned: true },
-                  { emoji: "✍",  label: "Reflector",   earned: true },
-                  { emoji: "🏆", label: "Top 10%",      earned: true },
-                  { emoji: "🌙", label: "Night Reader", earned: true },
-                  { emoji: "⭐", label: "Consistent",   earned: true },
-                  { emoji: "🎯", label: "30 Days",      earned: false },
-                  { emoji: "💎", label: "500 Verses",   earned: false },
-                  { emoji: "🌍", label: "Sharer",       earned: false },
-                ].map((b) => (
-                  <div
-                    key={b.label}
-                    style={{
-                      textAlign: "center",
-                      padding: "10px 6px",
-                      borderRadius: 10,
-                      background: b.earned ? "rgba(200,146,26,.08)" : "rgba(11,61,32,.04)",
-                      border: b.earned ? "1px solid rgba(200,146,26,.2)" : "1px solid rgba(11,61,32,.06)",
-                      opacity: b.earned ? 1 : 0.45,
-                    }}
-                  >
-                    <div style={{ fontSize: 20, marginBottom: 3 }}>{b.emoji}</div>
+                {BADGES.map((b) => (
+                  <div key={b.label} style={{ textAlign: "center", padding: "10px 6px", borderRadius: 10, background: b.earned ? "rgba(200,146,26,.08)" : "rgba(11,61,32,.04)", border: b.earned ? "1px solid rgba(200,146,26,.2)" : "1px solid rgba(11,61,32,.06)", opacity: b.earned ? 1 : 0.4 }}>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 4, color: b.earned ? "var(--gold)" : "var(--ink-soft)" }}>{b.icon}</div>
                     <div style={{ fontSize: 9, color: b.earned ? "var(--gold)" : "var(--ink-soft)", fontWeight: 700, fontFamily: "'Syne', sans-serif" }}>{b.label}</div>
                   </div>
                 ))}
@@ -264,32 +160,24 @@ export default function DailyChallenges() {
             </div>
           </div>
 
-          {/* Leaderboard */}
           <div className="al-card">
             <div className="al-card-header">
-              <span className="al-card-title">🥇 Friends Leaderboard</span>
+              <BarChart2 size={15} color="var(--gold)" />
+              <span className="al-card-title">Friends Leaderboard</span>
             </div>
             <div className="al-card-body">
-              {/* BACKEND: Leaderboard aggregated from /users collection in Firestore */}
-              {/* Sorted by total_points field, filtered to user's friends array */}
+              {/* BACKEND: Sorted by total_points in Firestore, filtered to friends array */}
               {[
                 { rank: 1, init: "AK", bg: "#2E9E5A", name: "Ahmed Khan",    pts: "2,340", isYou: false },
-                { rank: 2, init: "ZA", bg: "#C8921A", name: "Zara (You)",    pts: "1,840", isYou: true },
+                { rank: 2, init: "ZA", bg: "#C8921A", name: "Zara (You)",    pts: "1,840", isYou: true  },
                 { rank: 3, init: "NR", bg: "#F6E8C0", name: "Nadia Rizvi",   pts: "1,620", isYou: false },
                 { rank: 4, init: "MH", bg: "#0B3D20", name: "M. Hassan",     pts: "1,210", isYou: false },
               ].map((u) => (
-                <div key={u.rank} style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
-                  borderBottom: "1px solid rgba(200,146,26,.05)",
-                  background: u.isYou ? "rgba(200,146,26,.04)" : "transparent",
-                  borderRadius: 8, paddingLeft: u.isYou ? 6 : 0,
-                }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-soft)", width: 18, textAlign: "center", fontFamily: "'Syne', sans-serif" }}>
-                    {u.rank === 1 ? "🥇" : u.rank === 2 ? "🥈" : u.rank === 3 ? "🥉" : u.rank}
+                <div key={u.rank} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(200,146,26,.05)", background: u.isYou ? "rgba(200,146,26,.04)" : "transparent", borderRadius: 8, paddingLeft: u.isYou ? 6 : 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-soft)", width: 20, textAlign: "center", fontFamily: "'Syne', sans-serif" }}>
+                    {u.rank === 1 ? <Trophy size={14} color="#C8921A" /> : u.rank === 2 ? <Medal size={14} color="#8A7A60" /> : u.rank}
                   </span>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: u.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: u.rank === 3 ? "#0B3D20" : u.bg === "#F6E8C0" ? "#0B3D20" : "white", fontFamily: "'Syne', sans-serif", flexShrink: 0 }}>
-                    {u.init}
-                  </div>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: u.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: u.bg === "#F6E8C0" || u.bg === "#C8921A" ? "#0B3D20" : "white", fontFamily: "'Syne', sans-serif", flexShrink: 0 }}>{u.init}</div>
                   <span style={{ flex: 1, fontSize: 12.5, fontWeight: u.isYou ? 700 : 500, color: u.isYou ? "var(--green-dark)" : "var(--ink)" }}>{u.name}</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "var(--gold)", fontFamily: "'Syne', sans-serif" }}>{u.pts}</span>
                 </div>

@@ -27,9 +27,10 @@
   --card-shadow:  0 2px 16px rgba(11,61,32,.05);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+.al-app { box-sizing: border-box; margin: 0; padding: 0; }
 .al-app { font-family: 'DM Sans', sans-serif; }
 /* ── Layout ── */
+
 .al-app {
   display: flex;
   min-height: 100vh;
