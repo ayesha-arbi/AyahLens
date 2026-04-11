@@ -1226,7 +1226,7 @@ export default function Onboarding() {
     setLoading(false);
   }
 };
-
+const navigate = useNavigate();
   // Steps config
   const steps = [
     <StepWelcome   key={0} onNext={next} />,
