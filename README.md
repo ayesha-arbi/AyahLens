@@ -4,7 +4,7 @@
 
 AyahLens is a modern Islamic application that connects users with personalized Quran verses and Hadiths based on their current mood, life situation, or even what they see in the real world through AI-powered camera recognition.
 
-> **Built in 7 days for a Hackathon** — Demo-ready with 5 core features.
+> **Built for a Hackathon** — Demo-ready with 5 core features.
 
 ---
 
@@ -265,78 +265,7 @@ npm run build
 
 ---
 
-## 🔮 Future Roadmap
 
-### Phase 1: Backend Integration
-- [ ] Firebase Firestore setup
-- [ ] User authentication (anonymous + Google/Apple)
-- [ ] API endpoints for mood matching, verse recommendations
-- [ ] Cloud Functions for streak calculation, daily reminders
-
-### Phase 2: Mobile App
-- [ ] Flutter app scaffolding
-- [ ] Camera + ML Kit integration
-- [ ] Offline mode with service workers
-- [ ] Push notifications
-
-### Phase 3: Advanced Features
-- [ ] AI-powered Tafsir summaries (LLM-generated)
-- [ ] Collaborative filtering for verse recommendations
-- [ ] Group reading challenges
-- [ ] Export reflections as PDF/image
-
----
-
-## 🏆 Hackathon Demo
-
-**Status**: Demo-ready frontend with mock data
-
-**What Works:**
-- Full onboarding flow with Koko
-- All 5 core features (UI complete)
-- Landing page with scroll animations
-- Dashboard navigation
-- Simulated API responses
-
-**What's Missing:**
-- Backend API integration (endpoints documented in code comments)
-- Real authentication
-- Live database
-- Mobile camera implementation
-
----
-
-## 📝 API Documentation (Planned)
-
-### Mood Matching
-```
-POST /api/mood/match
-Body: { mood: string, text?: string }
-Response: { ayah: {...}, hadith: {...} }
-```
-
-### Reading Journey
-```
-GET /verses/by_key/{chapter}:{verse}
-GET /api/reading/next-suggestion
-POST /api/reading/mark-read
-POST /api/reflections
-```
-
-### AyahLens Camera
-```
-POST /api/lens/match
-Body: { objectLabel: string }
-Response: { verses: [...], why: string }
-```
-
-### Community
-```
-GET /api/feed
-POST /api/posts
-POST /api/reactions
-POST /api/comments
-```
 
 ---
 
@@ -363,4 +292,3 @@ Built for educational purposes during a hackathon.
 
 **Built with ❤️ for the Muslim Ummah**
 
-*بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ*
