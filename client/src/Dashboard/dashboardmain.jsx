@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   Smile, BookOpen, Camera, Globe, Trophy,
-  Settings as SettingsIcon, Menu, Flame,
+  Settings as SettingsIcon, Menu,
 } from "lucide-react";
 import MoodEntry from "./MoodEntry";
 import ReadingJourney from "./ReadingJourney";
@@ -12,12 +12,12 @@ import Settings from "./Settings";
 import "./DashboardStyles.css";
 
 const NAV_ITEMS = [
-  { id: "mood",       icon: <Smile size={16} />,        label: "Mood Entry",        section: "main",     badge: null },
-  { id: "reading",    icon: <BookOpen size={16} />,      label: "Reading Journey",   section: "main",     badge: null },
-  { id: "lens",       icon: <Camera size={16} />,        label: "AyahLens Camera",   section: "main",     badge: "WOW" },
-  { id: "community",  icon: <Globe size={16} />,         label: "Community",         section: "social",   badge: "3" },
-  { id: "challenges", icon: <Trophy size={16} />,        label: "Daily Challenges",  section: "personal", badge: null },
-  { id: "settings",   icon: <SettingsIcon size={16} />,  label: "Settings",          section: "personal", badge: null },
+  { id: "mood",       icon: <Smile size={16} />,        label: "Mood Entry",        section: "main" },
+  { id: "reading",    icon: <BookOpen size={16} />,      label: "Reading Journey",   section: "main" },
+  { id: "lens",       icon: <Camera size={16} />,        label: "AyahLens Camera",   section: "main" },
+  { id: "community",  icon: <Globe size={16} />,         label: "Community",         section: "social" },
+  { id: "challenges", icon: <Trophy size={16} />,        label: "Daily Challenges",  section: "personal" },
+  { id: "settings",   icon: <SettingsIcon size={16} />,  label: "Settings",          section: "personal" },
 ];
 
 const PAGE_TITLES = {
@@ -26,7 +26,7 @@ const PAGE_TITLES = {
   lens:       "AyahLens Camera ✨",
   community:  "Community Feed",
   challenges: "Daily Challenges",
-  settings:   "Settings & Onboarding",
+  settings:   "Settings & Preferences",
 };
 
 const TODAY = new Date().toLocaleDateString("en-GB", {
@@ -60,7 +60,6 @@ export default function DashboardMain() {
             <circle cx="20" cy="20" r="1.8" fill="#C8921A" />
           </svg>
           <span className="al-logo-text">AyahLens</span>
-          <span className="al-hack-badge">Demo</span>
         </div>
 
         <nav className="al-sidebar-nav">
@@ -75,11 +74,6 @@ export default function DashboardMain() {
                 >
                   <span className="al-nav-icon">{item.icon}</span>
                   <span className="al-nav-label">{item.label}</span>
-                  {item.badge && (
-                    <span className={`al-nav-badge ${item.badge === "WOW" ? "wow" : ""}`}>
-                      {item.badge}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
@@ -87,12 +81,10 @@ export default function DashboardMain() {
         </nav>
 
         <div className="al-sidebar-footer">
-          <div className="al-avatar">ZA</div>
+          <div className="al-avatar">AL</div>
           <div className="al-avatar-info">
-            <div className="al-avatar-name">Zara Aslam</div>
-            <div className="al-avatar-meta" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <Flame size={11} color="#C8921A" /> 7-day streak
-            </div>
+            <div className="al-avatar-name">AyahLens</div>
+            <div className="al-avatar-meta">Quran Foundation API</div>
           </div>
         </div>
       </aside>
@@ -104,9 +96,6 @@ export default function DashboardMain() {
           </button>
           <span className="al-topbar-title">{PAGE_TITLES[active]}</span>
           <span className="al-topbar-date">{TODAY}</span>
-          <div className="al-streak-pill">
-            <Flame size={13} /> 7 days
-          </div>
         </header>
         <div className="al-content">{renderPage()}</div>
       </div>

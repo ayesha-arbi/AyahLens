@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Heart, MessageCircle, Link2, UserPlus, Send, Users, BarChart2 } from "lucide-react";
+import { Heart, MessageCircle, Link2, Send, Users, BarChart2, Loader2 } from "lucide-react";
 import { apiFetch, apiPost } from "../hooks/useApi";
 
 function PostCard({ post, onLike }) {
@@ -20,14 +20,12 @@ function PostCard({ post, onLike }) {
         </div>
       )}
       <div className="al-post-actions">
-        {/* BACKEND: Firestore transaction — increment/decrement likes, update likedBy array */}
         <button className={`al-post-action ${post.liked ? "liked" : ""}`} onClick={() => onLike(post.id)}
           style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <Heart size={13} fill={post.liked ? "currentColor" : "none"} /> {post.likes}
+          <Heart size={13} fill={post.liked ? "currentColor" : "none"} /> {post.likes || 0}
         </button>
-        {/* BACKEND: Comments sub-collection: /posts/{postId}/comments */}
         <button className="al-post-action" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <MessageCircle size={13} /> {post.comments}
+          <MessageCircle size={13} /> {post.comments || 0}
         </button>
         <button className="al-post-action" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4 }}>
           <Link2 size={13} /> Share
@@ -37,48 +35,60 @@ function PostCard({ post, onLike }) {
   );
 }
 
+function normalizePost(post) {
+  return {
+    ...post,
+    initials: post.initials || (post.author || "U").slice(0, 2).toUpperCase(),
+    avatarBg: post.avatarBg || (post.source === "quran-reflect" ? "#2E9E5A" : "#C8921A"),
+    avatarColor: post.avatarColor || "#F6E8C0",
+    name: post.name || post.author || "User",
+    meta: post.meta || (post.source === "quran-reflect" ? "Quran Reflect" : new Date(post.createdAt).toLocaleDateString()),
+    body: post.body || post.content || "",
+    comments: post.comments || 0,
+    liked: post.liked || false,
+  };
+}
+
 export default function Community() {
   const [posts, setPosts]           = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
   const [shareText, setShareText]   = useState("");
-  const [filter, setFilter]         = useState("Friends");
-  const [friendSearch, setFriendSearch] = useState("");
+  const [posting, setPosting]       = useState(false);
   const [stats, setStats]           = useState(null);
 
   // Load posts on mount
   useEffect(() => {
     apiFetch("/api/community/posts")
       .then((data) => setPosts(data?.posts || []))
-      .catch(() => setPosts([]));
+      .catch(() => setPosts([]))
+      .finally(() => setPostsLoading(false));
     apiFetch("/api/community/stats")
       .then(setStats)
       .catch(() => {});
   }, []);
 
   const handleLike = async (id) => {
-    // Only like local posts
-    if (id.startsWith("qr-")) {
-      // Quran Reflect posts — toggle locally
-      setPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
-    } else {
-      try {
-        const res = await apiPost(`/api/community/posts/${id}/like`, { userId: "demo-user" });
-        setPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: res.liked, likes: res.likes } : p));
-      } catch {
-        setPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
-      }
+    try {
+      const res = await apiPost(`/api/community/posts/${id}/like`, { userId: "demo-user" });
+      setPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: res.liked, likes: res.likes } : p));
+    } catch {
+      setPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? (p.likes || 1) - 1 : (p.likes || 0) + 1 } : p));
     }
   };
 
   const handleShare = async () => {
-    if (!shareText.trim()) return;
+    if (!shareText.trim() || posting) return;
+    setPosting(true);
     try {
-      const post = await apiPost("/api/community/posts", { author: "Zara Aslam", content: shareText, type: "post" });
-      setPosts([{ ...post, initials: "ZA", avatarBg: "#C8921A", avatarColor: "#0B3D20", name: post.author, meta: "Just now", body: post.content, liked: false }, ...posts]);
+      const post = await apiPost("/api/community/posts", { author: "User", content: shareText, type: "post" });
+      if (post) {
+        setPosts([normalizePost({ ...post, meta: "Just now" }), ...posts]);
+      }
     } catch {
-      // Fallback local
-      setPosts([{ id: `p${Date.now()}`, initials: "ZA", avatarBg: "#C8921A", avatarColor: "#0B3D20", name: "Zara Aslam", meta: "Just now", body: shareText, likes: 0, comments: 0, liked: false }, ...posts]);
+      setPosts([normalizePost({ id: `local-${Date.now()}`, author: "User", content: shareText, likes: 0, comments: 0, meta: "Just now", createdAt: new Date().toISOString() }), ...posts]);
     }
     setShareText("");
+    setPosting(false);
   };
 
   return (
@@ -94,80 +104,41 @@ export default function Community() {
             <div className="al-card-header">
               <div className="al-card-num">4</div>
               <span className="al-card-title">Share a Moment</span>
-              <span className="al-card-tag">Feature 4 of 5</span>
+              <span className="al-card-tag">Community</span>
             </div>
             <div className="al-card-body">
-              <div className="al-chips" style={{ marginBottom: 10 }}>
-                {["Friends","Public"].map((v) => (
-                  <span key={v} className={`al-chip ${filter === v ? "active" : ""}`} onClick={() => setFilter(v)}>{v}</span>
-                ))}
-              </div>
-              {/* BACKEND: Post text → Firestore /posts collection */}
               <div className="al-input-row">
                 <input className="al-input" placeholder='e.g. "Just scanned a tree — this ayah changed my day!"' value={shareText} onChange={(e) => setShareText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleShare()} />
-                <button className="al-btn" onClick={handleShare} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Send size={14} /> Post
+                <button className="al-btn" onClick={handleShare} disabled={posting || !shareText.trim()} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Send size={14} /> {posting ? "Posting…" : "Post"}
                 </button>
               </div>
-              <p style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>Tip: Share a Lens moment and it automatically attaches the verse you discovered!</p>
+              <p style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>Share a Lens moment or verse reflection with the community.</p>
             </div>
           </div>
 
+          {/* Posts from API */}
           <div className="al-card">
             <div className="al-card-header">
               <span className="al-card-title">Recent Posts</span>
               <span className="al-card-tag">{posts.length} posts</span>
             </div>
-            {posts.length === 0 ? (
-              <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "var(--ink-soft)" }}>No posts yet — be the first to share!</div>
+            {postsLoading ? (
+              <div style={{ padding: 24, textAlign: "center", color: "var(--ink-soft)", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <Loader2 size={14} className="al-spin" /> Loading posts…
+              </div>
+            ) : posts.length === 0 ? (
+              <div style={{ padding: 24, textAlign: "center", fontSize: 12, color: "var(--ink-soft)" }}>
+                No posts yet — be the first to share a moment!
+              </div>
             ) : (
-              posts.map((post) => <PostCard key={post.id} post={{
-                ...post,
-                initials: post.initials || (post.author || "U").slice(0,2).toUpperCase(),
-                avatarBg: post.avatarBg || (post.source === "quran-reflect" ? "#2E9E5A" : "#C8921A"),
-                avatarColor: post.avatarColor || "#F6E8C0",
-                name: post.name || post.author || "User",
-                meta: post.meta || (post.source === "quran-reflect" ? "Quran Reflect" : new Date(post.createdAt).toLocaleDateString()),
-                body: post.body || post.content || "",
-                comments: post.comments || 0,
-                liked: post.liked || false,
-              }} onLike={handleLike} />)
+              posts.map((post) => <PostCard key={post.id} post={normalizePost(post)} onLike={handleLike} />)
             )}
           </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div className="al-card">
-            <div className="al-card-header">
-              <Users size={15} color="var(--gold)" />
-              <span className="al-card-title">Find Friends</span>
-            </div>
-            <div className="al-card-body">
-              {/* BACKEND: GET /api/users/search?q={query} — searches Firestore users collection */}
-              <div className="al-input-row" style={{ marginBottom: 12 }}>
-                <input className="al-input" placeholder="Search by username or phone…" value={friendSearch} onChange={(e) => setFriendSearch(e.target.value)} />
-              </div>
-              <div className="al-section-label">Suggestions</div>
-              {[
-                { init: "SF", bg: "#C8921A", color: "#0B3D20", name: "Sara Fatima",  mutual: "12 mutual friends" },
-                { init: "OM", bg: "#2E9E5A", color: "#F6E8C0", name: "Omar Malik",   mutual: "8 mutual friends"  },
-                { init: "AA", bg: "#0B3D20", color: "#E8C060", name: "Aisha Ansari", mutual: "5 mutual friends"  },
-              ].map((f) => (
-                <div key={f.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(200,146,26,.05)" }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: f.bg, color: f.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flexShrink: 0, fontFamily: "'Syne', sans-serif" }}>{f.init}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>{f.name}</div>
-                    <div style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>{f.mutual}</div>
-                  </div>
-                  {/* BACKEND: Add friend → write to /users/{uid}/friends/{friendUid} in Firestore */}
-                  <button className="al-btn ghost sm" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <UserPlus size={12} /> Add
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
+          {/* Community Stats from API */}
           <div className="al-card">
             <div className="al-card-header">
               <BarChart2 size={15} color="var(--gold)" />
@@ -184,6 +155,19 @@ export default function Community() {
                   <span style={{ fontSize: 13, fontWeight: 700, color: "var(--green-dark)", fontFamily: "'Syne', sans-serif" }}>{s.value}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Info card */}
+          <div className="al-card">
+            <div className="al-card-header">
+              <Users size={15} color="var(--gold)" />
+              <span className="al-card-title">About Community</span>
+            </div>
+            <div className="al-card-body">
+              <p style={{ fontSize: 12, color: "var(--ink-mid)", lineHeight: 1.6 }}>
+                The community feed is powered by a local JSON backend with Quran Reflect integration. Share verse discoveries, lens moments, and reflections with other users.
+              </p>
             </div>
           </div>
         </div>
