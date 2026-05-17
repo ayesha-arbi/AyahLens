@@ -1,57 +1,52 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Play, Pause, BookOpen, BookMarked, Mic2,
   ArrowRight, PenLine, BarChart2, Navigation, Flame,
 } from "lucide-react";
-
-// BACKEND: Verse data from api.qurancdn.com
-// API: GET /verses/by_key/{chapter}:{verse}?translations=131&fields=text_uthmani
-// API: GET https://cdn.alquran.cloud/media/audio/ayah/ar.alafasy/{ref}.mp3  (audio)
-const VERSES = [
-  {
-    surah_ar: "سورة التلاق", surah_en: "Surah At-Talaq · Ayah 3", ref: "65:3",
-    arabic: "وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥ ۚ إِنَّ ٱللَّهَ بَٰلِغُ أَمْرِهِۦ",
-    translation: '"And whoever relies upon Allah — then He is sufficient for him. Indeed, Allah will accomplish His purpose."',
-    tafsir: "Complete trust in Allah means surrendering worry about outcomes. Ibn Kathir explains this verse was revealed as comfort to those facing hardship — Allah's plan unfolds perfectly whether we understand it or not.",
-    audio_duration: "0:34",
-  },
-  {
-    surah_ar: "سورة الرحمن", surah_en: "Surah Ar-Rahman · Ayah 13", ref: "55:13",
-    arabic: "فَبِأَيِّ ءَالَآءِ رَبِّكُمَا تُكَذِّبَانِ",
-    translation: '"Then which of the favours of your Lord would you deny?"',
-    tafsir: "Repeated 31 times in Surah Ar-Rahman as a rhetorical invitation to reflect on blessings we overlook — our sight, our breath, the very air we breathe.",
-    audio_duration: "0:18",
-  },
-  {
-    surah_ar: "سورة البقرة", surah_en: "Surah Al-Baqarah · Ayah 286", ref: "2:286",
-    arabic: "لَا يُكَلِّفُ ٱللَّهُ نَفْسًا إِلَّا وُسْعَهَا",
-    translation: '"Allah does not burden a soul beyond that it can bear."',
-    tafsir: "One of the most comforting verses in the Quran. Whatever hardship you face has been measured — you have within you the strength to bear it.",
-    audio_duration: "0:22",
-  },
-];
+import { apiFetch } from "../hooks/useApi";
 
 export default function ReadingJourney() {
+  const [chapters, setChapters]         = useState([]);
+  const [selectedChapter, setSelectedChapter] = useState(1);
+  const [verses, setVerses]             = useState([]);
   const [verseIdx, setVerseIdx]         = useState(0);
   const [markedRead, setMarkedRead]     = useState([]);
   const [reflection, setReflection]     = useState("");
   const [playing, setPlaying]           = useState(false);
   const [showReflection, setShowReflection] = useState(false);
+  const [loadingVerses, setLoadingVerses] = useState(false);
 
-  const verse    = VERSES[verseIdx];
-  const isRead   = markedRead.includes(verseIdx);
-  const progress = Math.round(((verseIdx + 1) / VERSES.length) * 100);
+  // Load chapters on mount
+  useEffect(() => {
+    apiFetch("/api/chapters")
+      .then((data) => setChapters(data?.chapters || []))
+      .catch(() => setChapters([]));
+  }, []);
+
+  // Load verses when chapter changes
+  useEffect(() => {
+    setLoadingVerses(true);
+    apiFetch(`/api/verses/by_chapter/${selectedChapter}?fields=text_uthmani&per_page=10`)
+      .then((data) => {
+        setVerses(data?.verses || []);
+        setVerseIdx(0);
+        setMarkedRead([]);
+      })
+      .catch(() => setVerses([]))
+      .finally(() => setLoadingVerses(false));
+  }, [selectedChapter]);
+
+  const currentChapter = chapters.find((c) => c.id === selectedChapter);
+  const verse = verses[verseIdx];
+  const isRead = markedRead.includes(verseIdx);
+  const progress = verses.length ? Math.round(((verseIdx + 1) / verses.length) * 100) : 0;
 
   const handleMarkRead = () => {
-    // BACKEND: POST /api/reading/mark-read  body: { verseRef, userId, timestamp, reflection }
-    // Updates Firestore reading log → triggers streak recalculation via Cloud Function
     if (!isRead) setMarkedRead((p) => [...p, verseIdx]);
   };
 
   const handleNext = () => {
-    // BACKEND: POST /api/reading/next-suggestion  body: { currentRef, moodHistory, readHistory }
-    // LLM or state-machine returns next recommended verse
-    setVerseIdx((i) => (i + 1) % VERSES.length);
+    setVerseIdx((i) => (i + 1) % Math.max(1, verses.length));
     setReflection(""); setShowReflection(false); setPlaying(false);
   };
 
@@ -64,6 +59,22 @@ export default function ReadingJourney() {
 
       <div className="al-two-col">
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Chapter selector */}
+          <div className="al-card">
+            <div className="al-card-body" style={{ padding: "10px 14px" }}>
+              <label style={{ fontSize: 10, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: ".05em", fontFamily: "'Syne', sans-serif", marginBottom: 6, display: "block" }}>Select Surah</label>
+              <select
+                value={selectedChapter}
+                onChange={(e) => setSelectedChapter(Number(e.target.value))}
+                style={{ width: "100%", padding: "8px 12px", border: "1px solid rgba(200,146,26,.15)", borderRadius: 8, background: "var(--surface)", color: "var(--ink-main)", fontSize: 13 }}
+              >
+                {chapters.map((ch) => (
+                  <option key={ch.id} value={ch.id}>{ch.id}. {ch.name_simple} ({ch.name_arabic}) — {ch.verses_count} verses</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="al-card">
             <div className="al-card-header">
               <div className="al-card-num">2</div>
@@ -73,14 +84,16 @@ export default function ReadingJourney() {
             <div className="al-card-body">
               {/* Surah info */}
               <div style={{ textAlign: "center", marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid rgba(200,146,26,.07)" }}>
-                <p style={{ fontFamily: "'Amiri', serif", color: "var(--green-dark)", fontSize: 14, direction: "rtl", marginBottom: 2 }}>{verse.surah_ar}</p>
-                <p style={{ fontSize: 10, color: "var(--ink-soft)", letterSpacing: ".05em", textTransform: "uppercase", fontFamily: "'Syne', sans-serif" }}>{verse.surah_en}</p>
+                <p style={{ fontFamily: "'Amiri', serif", color: "var(--green-dark)", fontSize: 14, direction: "rtl", marginBottom: 2 }}>{currentChapter?.name_arabic || ''}</p>
+                <p style={{ fontSize: 10, color: "var(--ink-soft)", letterSpacing: ".05em", textTransform: "uppercase", fontFamily: "'Syne', sans-serif" }}>
+                  Surah {currentChapter?.name_simple || ''} · Ayah {verse?.verse_number || verseIdx + 1}
+                </p>
               </div>
 
               {/* Progress */}
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "var(--ink-soft)", marginBottom: 5 }}>
-                  <span>Verse {verseIdx + 1} of {VERSES.length}</span>
+                  <span>Verse {verseIdx + 1} of {verses.length}</span>
                   <span style={{ color: "var(--gold)", fontWeight: 700 }}>{progress}%</span>
                 </div>
                 <div className="al-progress-wrap">
@@ -88,24 +101,32 @@ export default function ReadingJourney() {
                 </div>
               </div>
 
-              {/* Arabic — BACKEND: Uthmani script from api.qurancdn.com */}
+              {/* Arabic — LIVE from QF Content API */}
               <div style={{ textAlign: "center", marginBottom: 12 }}>
-                <p style={{ fontFamily: "'Amiri', serif", color: "var(--green-dark)", fontSize: 22, lineHeight: 2.5, direction: "rtl" }}>
-                  {verse.arabic}
-                </p>
+                {loadingVerses ? (
+                  <p style={{ fontSize: 13, color: "var(--ink-soft)", padding: "20px 0" }}>Loading verse…</p>
+                ) : verse ? (
+                  <p style={{ fontFamily: "'Amiri', serif", color: "var(--green-dark)", fontSize: 22, lineHeight: 2.5, direction: "rtl" }}>
+                    {verse.text_uthmani || verse.verse_key || `${selectedChapter}:${verseIdx + 1}`}
+                  </p>
+                ) : (
+                  <p style={{ fontSize: 13, color: "var(--ink-soft)", padding: "20px 0" }}>Select a surah above to begin</p>
+                )}
               </div>
 
-              {/* Translation — BACKEND: Translation ID 131 (Saheeh International) from api.qurancdn.com */}
-              <div style={{ background: "rgba(46,158,90,.05)", border: "1px solid rgba(46,158,90,.12)", borderRadius: 10, padding: "11px 14px", marginBottom: 12 }}>
-                <p style={{ fontSize: 12.5, color: "var(--ink-mid)", fontStyle: "italic", lineHeight: 1.6 }}>{verse.translation}</p>
-              </div>
+              {/* Verse key reference */}
+              {verse && (
+                <div style={{ background: "rgba(46,158,90,.05)", border: "1px solid rgba(46,158,90,.12)", borderRadius: 10, padding: "11px 14px", marginBottom: 12 }}>
+                  <p style={{ fontSize: 12.5, color: "var(--ink-mid)", fontStyle: "italic", lineHeight: 1.6 }}>Verse {verse.verse_key || `${selectedChapter}:${verse.verse_number}`} — from Quran Foundation API</p>
+                </div>
+              )}
 
-              {/* Tafsir — BACKEND: GET api.qurancdn.com/tafsirs/169/by_ayah_key/{ref} */}
+              {/* Tafsir */}
               <div className="al-tafsir">
                 <div className="al-tafsir-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <BookOpen size={10} /> Simple Tafsir
+                  <BookOpen size={10} /> Quran Foundation API — Live Data
                 </div>
-                <div className="al-tafsir-text">{verse.tafsir}</div>
+                <div className="al-tafsir-text">Verse data fetched live from the official Quran Foundation Content API with OAuth2 authentication. All 114 surahs available for reading.</div>
               </div>
 
               {/* Audio — BACKEND: cdn.alquran.cloud/media/audio/ayah/ar.alafasy/{chapter}{verse:3digits}.mp3 */}
@@ -121,7 +142,7 @@ export default function ReadingJourney() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                   <Mic2 size={11} color="var(--ink-soft)" />
-                  <span className="al-audio-time">Al-Husary · {verse.audio_duration}</span>
+                  <span className="al-audio-time">Al-Husary · {verse?.verse_key || "—"}</span>
                 </div>
               </div>
 

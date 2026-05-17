@@ -1,15 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Heart, MessageCircle, Link2, UserPlus, Send, Users, BarChart2 } from "lucide-react";
-
-// BACKEND: All posts from Firebase Firestore
-// SDK: db.collection('posts').orderBy('timestamp','desc').onSnapshot(...)
-// Friends: /users/{uid}/friends subcollection
-const INITIAL_POSTS = [
-  { id: "p1", initials: "ZA", avatarBg: "#C8921A", avatarColor: "#0B3D20", name: "Zara Aslam",     meta: "Karachi · Ocean · 2h ago",          body: '"SubhanAllah, pointed the Lens at the sea in Clifton. This ayah hit differently!"', ayah: { ar: "وَهُوَ ٱلَّذِى سَخَّرَ ٱلْبَحْرَ", tr: '"It is He who subjected the sea for you." — An-Nahl 16:14' }, likes: 47, comments: 12, liked: false },
-  { id: "p2", initials: "AK", avatarBg: "#2E9E5A", avatarColor: "#F6E8C0", name: "Ahmed Khan",     meta: "Islamabad · Mood: Anxious · 5h ago",  body: '"Was so stressed before my exam. This ayah appeared and calmed me instantly. Alhamdulillah."', ayah: { ar: "فَإِنَّ مَعَ ٱلْعُسْرِ يُسْرًا", tr: '"For indeed, with hardship will be ease." — Ash-Sharh 94:5' }, likes: 93, comments: 21, liked: true },
-  { id: "p3", initials: "NR", avatarBg: "#F6E8C0", avatarColor: "#0B3D20", name: "Nadia Rizvi",    meta: "Lahore · Flower · Yesterday",         body: '"I\'ll never look at flowers the same. My daughter said \'Mama, the flowers are praying!\' SubhanAllah."', ayah: { ar: "وَٱلنَّجْمُ وَٱلشَّجَرُ يَسْجُدَانِ", tr: '"And the stars and trees prostrate." — Ar-Rahman 55:6' }, likes: 61, comments: 8,  liked: false },
-  { id: "p4", initials: "MH", avatarBg: "#0B3D20", avatarColor: "#E8C060", name: "Mohammad Hassan", meta: "Dubai · Mountain · 2 days ago",        body: '"On the plane seeing mountains from above — scanned immediately. Incredible feature mashAllah."', ayah: { ar: "وَٱلْجِبَالَ أَوْتَادًا", tr: '"And the mountains as stakes?" — An-Naba 78:7' }, likes: 114, comments: 34, liked: false },
-];
+import { apiFetch, apiPost } from "../hooks/useApi";
 
 function PostCard({ post, onLike }) {
   return (
@@ -47,21 +38,46 @@ function PostCard({ post, onLike }) {
 }
 
 export default function Community() {
-  const [posts, setPosts]           = useState(INITIAL_POSTS);
+  const [posts, setPosts]           = useState([]);
   const [shareText, setShareText]   = useState("");
   const [filter, setFilter]         = useState("Friends");
   const [friendSearch, setFriendSearch] = useState("");
+  const [stats, setStats]           = useState(null);
 
-  const handleLike = (id) => {
-    // BACKEND: Firestore transaction on /posts/{id}
-    setPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
+  // Load posts on mount
+  useEffect(() => {
+    apiFetch("/api/community/posts")
+      .then((data) => setPosts(data?.posts || []))
+      .catch(() => setPosts([]));
+    apiFetch("/api/community/stats")
+      .then(setStats)
+      .catch(() => {});
+  }, []);
+
+  const handleLike = async (id) => {
+    // Only like local posts
+    if (id.startsWith("qr-")) {
+      // Quran Reflect posts — toggle locally
+      setPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
+    } else {
+      try {
+        const res = await apiPost(`/api/community/posts/${id}/like`, { userId: "demo-user" });
+        setPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: res.liked, likes: res.likes } : p));
+      } catch {
+        setPosts((prev) => prev.map((p) => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
+      }
+    }
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!shareText.trim()) return;
-    // BACKEND: POST to Firestore /posts — { userId, text, timestamp: serverTimestamp(), visibility }
-    const newPost = { id: `p${Date.now()}`, initials: "ZA", avatarBg: "#C8921A", avatarColor: "#0B3D20", name: "Zara Aslam", meta: `Just now · ${filter}`, body: `"${shareText}"`, ayah: null, likes: 0, comments: 0, liked: false };
-    setPosts([newPost, ...posts]);
+    try {
+      const post = await apiPost("/api/community/posts", { author: "Zara Aslam", content: shareText, type: "post" });
+      setPosts([{ ...post, initials: "ZA", avatarBg: "#C8921A", avatarColor: "#0B3D20", name: post.author, meta: "Just now", body: post.content, liked: false }, ...posts]);
+    } catch {
+      // Fallback local
+      setPosts([{ id: `p${Date.now()}`, initials: "ZA", avatarBg: "#C8921A", avatarColor: "#0B3D20", name: "Zara Aslam", meta: "Just now", body: shareText, likes: 0, comments: 0, liked: false }, ...posts]);
+    }
     setShareText("");
   };
 
@@ -97,13 +113,26 @@ export default function Community() {
             </div>
           </div>
 
-          {/* BACKEND: Real-time listener — db.collection('posts').orderBy('timestamp','desc').onSnapshot() */}
           <div className="al-card">
             <div className="al-card-header">
               <span className="al-card-title">Recent Posts</span>
-              <span className="al-card-tag">{filter}</span>
+              <span className="al-card-tag">{posts.length} posts</span>
             </div>
-            {posts.map((post) => <PostCard key={post.id} post={post} onLike={handleLike} />)}
+            {posts.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "var(--ink-soft)" }}>No posts yet — be the first to share!</div>
+            ) : (
+              posts.map((post) => <PostCard key={post.id} post={{
+                ...post,
+                initials: post.initials || (post.author || "U").slice(0,2).toUpperCase(),
+                avatarBg: post.avatarBg || (post.source === "quran-reflect" ? "#2E9E5A" : "#C8921A"),
+                avatarColor: post.avatarColor || "#F6E8C0",
+                name: post.name || post.author || "User",
+                meta: post.meta || (post.source === "quran-reflect" ? "Quran Reflect" : new Date(post.createdAt).toLocaleDateString()),
+                body: post.body || post.content || "",
+                comments: post.comments || 0,
+                liked: post.liked || false,
+              }} onLike={handleLike} />)
+            )}
           </div>
         </div>
 
@@ -145,12 +174,10 @@ export default function Community() {
               <span className="al-card-title">Community Stats</span>
             </div>
             <div className="al-card-body">
-              {/* BACKEND: Aggregated from Firestore counters or Cloud Functions */}
               {[
-                { label: "Active users today",   value: "2,847" },
-                { label: "Verses shared today",  value: "9,134" },
-                { label: "Lens scans today",     value: "1,229" },
-                { label: "Your friends reading", value: "14"    },
+                { label: "Total posts",   value: stats?.totalPosts ?? posts.length },
+                { label: "Total likes",   value: stats?.totalLikes ?? 0 },
+                { label: "Data source",   value: "QF API" },
               ].map((s) => (
                 <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(200,146,26,.05)" }}>
                   <span style={{ fontSize: 12, color: "var(--ink-mid)" }}>{s.label}</span>

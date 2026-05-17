@@ -1,58 +1,77 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Mic, Send, BookMarked, Share2, ArrowRight, Flame,
   Star, Camera, BookOpen, Sun, Leaf, Waves, Zap,
   Search, Heart, CloudRain, Smile, HelpCircle, CheckCircle,
 } from "lucide-react";
-
-// BACKEND: POST /api/mood/match  body: { mood, text }
-// Returns matched Ayah + Hadith — powered by Gemini Flash / Grok or rule engine
-const MOOD_MAP = {
-  Anxious:     { ayah: { ar: "أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ", tr: "Verily, in the remembrance of Allah do hearts find rest.", ref: "Ar-Ra'd 13:28" }, hadith: '"No fatigue, illness, anxiety, grief or sadness afflicts a Muslim but Allah expiates his sins." — Bukhari' },
-  Grateful:    { ayah: { ar: "لَئِن شَكَرْتُمْ لَأَزِيدَنَّكُمْ", tr: "If you are grateful, I will surely increase you in favour.", ref: "Ibrahim 14:7" }, hadith: '"He who does not thank people does not thank Allah." — Abu Dawud' },
-  Lost:        { ayah: { ar: "وَمَن يَتَّقِ ٱللَّهَ يَجْعَل لَّهُۥ مَخْرَجًا", tr: "Whoever fears Allah — He will make for him a way out.", ref: "At-Talaq 65:2" }, hadith: '"Take advantage of five before five: youth, health, wealth, free time, and life." — Hakim' },
-  Stressed:    { ayah: { ar: "فَإِنَّ مَعَ ٱلْعُسْرِ يُسْرًا", tr: "For indeed, with hardship will be ease.", ref: "Ash-Sharh 94:5" }, hadith: '"Wonderful is the affair of the believer — all of it is good." — Muslim' },
-  Seeking:     { ayah: { ar: "وَٱلَّذِينَ جَٰهَدُواْ فِينَا لَنَهْدِيَنَّهُمْ سُبُلَنَا", tr: "Those who strive for Us — We will guide them to Our ways.", ref: "Al-Ankabut 29:69" }, hadith: '"Whoever seeks knowledge, Allah makes his path to Paradise easy." — Muslim' },
-  Joyful:      { ayah: { ar: "قُلْ بِفَضْلِ ٱللَّهِ وَبِرَحْمَتِهِۦ فَبِذَٰلِكَ فَلْيَفْرَحُواْ", tr: "In the bounty of Allah and in His mercy — in that let them rejoice.", ref: "Yunus 10:58" }, hadith: '"None truly believes until he loves for his brother what he loves for himself." — Bukhari' },
-};
-const DEFAULT_RESULT = MOOD_MAP["Anxious"];
+import { apiPost, apiFetch } from "../hooks/useApi";
 
 const ALL_MOODS = [
   { label: "Anxious",     icon: <CloudRain size={13} /> },
   { label: "Grateful",    icon: <Leaf size={13} /> },
   { label: "Lost",        icon: <Waves size={13} /> },
-  { label: "Joyful",      icon: <Sun size={13} /> },
-  { label: "Seeking",     icon: <Search size={13} /> },
+  { label: "Happy",       icon: <Sun size={13} /> },
+  { label: "Hopeful",     icon: <Star size={13} /> },
   { label: "Stressed",    icon: <Zap size={13} /> },
   { label: "Sad",         icon: <CloudRain size={13} /> },
-  { label: "Hopeful",     icon: <Star size={13} /> },
+  { label: "Motivated",   icon: <Star size={13} /> },
   { label: "Angry",       icon: <Zap size={13} /> },
-  { label: "Content",     icon: <Smile size={13} /> },
+  { label: "Peaceful",    icon: <Smile size={13} /> },
   { label: "Lonely",      icon: <Heart size={13} /> },
   { label: "Confused",    icon: <HelpCircle size={13} /> },
-  { label: "Repentant",   icon: <Star size={13} /> },
-  { label: "Excited",     icon: <Zap size={13} /> },
-  { label: "Worried",     icon: <CloudRain size={13} /> },
+  { label: "Regretful",   icon: <Star size={13} /> },
+  { label: "Inspired",    icon: <Zap size={13} /> },
+  { label: "Fearful",     icon: <CloudRain size={13} /> },
   { label: "Heartbroken", icon: <Heart size={13} /> },
-  { label: "Overwhelmed", icon: <Waves size={13} /> },
-  { label: "Peaceful",    icon: <Leaf size={13} /> },
-  { label: "Curious",     icon: <Search size={13} /> },
-  { label: "Struggling",  icon: <Waves size={13} /> },
+  { label: "Weak",        icon: <Waves size={13} /> },
+  { label: "Blessed",     icon: <Leaf size={13} /> },
+  { label: "Patient",     icon: <Search size={13} /> },
+  { label: "Uncertain",   icon: <Waves size={13} /> },
 ];
 
 export default function MoodEntry() {
   const [activeMood, setActiveMood] = useState("Anxious");
   const [freeText, setFreeText]     = useState("");
-  const [result, setResult]         = useState(DEFAULT_RESULT);
+  const [result, setResult]         = useState(null);
   const [loading, setLoading]       = useState(false);
   const [saved, setSaved]           = useState(false);
+  const [vodData, setVodData]       = useState(null);
+
+  // Fetch verse of the day on mount
+  useEffect(() => {
+    apiFetch("/api/mood/verse-of-day")
+      .then(setVodData)
+      .catch(() => setVodData(null));
+  }, []);
 
   const handleMatch = async () => {
-    setLoading(true); setSaved(false);
-    await new Promise((r) => setTimeout(r, 600));
-    setResult(MOOD_MAP[activeMood] || DEFAULT_RESULT);
+    setLoading(true); setSaved(false); setResult(null);
+    try {
+      const body = freeText.trim()
+        ? { mood: "custom", text: freeText }
+        : { mood: activeMood };
+      const data = await apiPost("/api/mood/match", body);
+      setResult(data);
+    } catch (err) {
+      console.error("Mood match error:", err);
+      setResult(null);
+    }
     setLoading(false);
   };
+
+  // Extract first successful verse from result
+  const getFirstVerse = () => {
+    if (!result?.verses) return null;
+    const v = result.verses.find((v) => v.verse);
+    if (!v) return null;
+    return {
+      key: v.key,
+      arabic: v.verse?.text_uthmani || v.verse?.verse_key || v.key,
+      ref: v.key,
+    };
+  };
+
+  const firstVerse = getFirstVerse();
 
   return (
     <div>
@@ -87,10 +106,9 @@ export default function MoodEntry() {
             </div>
             <div className="al-card-body">
               <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 12 }}>
-                Choose a mood chip or describe freely — voice input supported in the mobile app.
+                Choose a mood chip or describe freely — AI-powered matching via Gemini + Quran Foundation API.
               </p>
 
-              {/* BACKEND: Each chip sent to POST /api/mood/match */}
               <div className="al-chips">
                 {ALL_MOODS.map((m) => (
                   <span
@@ -110,7 +128,6 @@ export default function MoodEntry() {
                 <div className="al-divider-line" />
               </div>
 
-              {/* BACKEND: Free text → LLM emotion extraction — POST /api/mood/nlp */}
               <div className="al-input-row">
                 <input
                   className="al-input"
@@ -119,7 +136,6 @@ export default function MoodEntry() {
                   onChange={(e) => setFreeText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleMatch()}
                 />
-                {/* BACKEND: Voice — Flutter speech_to_text / Web Speech API */}
                 <button className="al-btn ghost" style={{ padding: "10px 14px" }} title="Voice input">
                   <Mic size={16} />
                 </button>
@@ -135,13 +151,15 @@ export default function MoodEntry() {
                 {loading ? "Finding verses…" : "Find My Verse"}
               </button>
 
-              {result && !loading && (
+              {result && !loading && firstVerse && (
                 <div style={{ marginTop: 16 }}>
-                  {/* BACKEND: Verse data from api.qurancdn.com */}
                   <div className="al-ayah-box">
-                    <div className="al-ayah-ref">Matched Ayah · {result.ayah.ref}</div>
-                    <div className="al-ayah-arabic">{result.ayah.ar}</div>
-                    <div className="al-ayah-trans">"{result.ayah.tr}"</div>
+                    <div className="al-ayah-ref">
+                      {result.emoji} Matched Ayah · Surah {firstVerse.ref}
+                      {result.aiUsed && <span style={{ marginLeft: 8, fontSize: 10, color: "var(--gold)" }}>✨ AI</span>}
+                    </div>
+                    <div className="al-ayah-arabic">{firstVerse.arabic}</div>
+                    <div className="al-ayah-trans">{result.reasoning}</div>
                     <div className="al-ayah-actions">
                       <button
                         className={`al-ayah-btn ${saved ? "green-btn" : ""}`}
@@ -161,13 +179,22 @@ export default function MoodEntry() {
                     </div>
                   </div>
 
-                  {/* BACKEND: Hadith from fawazahmed0 Hadith API — free, no key needed */}
-                  <div className="al-hadith-box" style={{ marginTop: 10 }}>
-                    <div className="al-hadith-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <BookOpen size={11} /> Related Hadith
+                  {/* Show all matched verses */}
+                  {result.verses.filter(v => v.verse).length > 1 && (
+                    <div style={{ marginTop: 10, fontSize: 11, color: "var(--ink-soft)" }}>
+                      <strong>More verses:</strong>{" "}
+                      {result.verses.filter(v => v.verse).slice(1).map((v, i) => (
+                        <span key={i} style={{ marginRight: 8 }}>📖 {v.key}</span>
+                      ))}
                     </div>
-                    <div className="al-hadith-text">{result.hadith}</div>
-                  </div>
+                  )}
+                </div>
+              )}
+
+              {result && !loading && !firstVerse && (
+                <div style={{ marginTop: 16, textAlign: "center", color: "var(--ink-soft)", fontSize: 12 }}>
+                  {result.emoji} Mood matched: <strong>{result.mood}</strong> — Verses unavailable in pre-live API.
+                  <br /><em>{result.reasoning}</em>
                 </div>
               )}
 
@@ -181,20 +208,30 @@ export default function MoodEntry() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* BACKEND: GET /api/verse-of-day — rotates from curated Firestore list */}
+          {/* Verse of the Day — LIVE from QF API */}
           <div className="al-vod">
             <div className="al-vod-label">Verse of the Day</div>
-            <div className="al-vod-arabic">وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥ</div>
-            <div className="al-vod-trans">"Whoever relies upon Allah — then He is sufficient for him."</div>
-            <div className="al-vod-ref">At-Talaq 65:3</div>
+            {vodData?.verse ? (
+              <>
+                <div className="al-vod-arabic">{vodData.verse.text_uthmani || vodData.verse.verse_key}</div>
+                <div className="al-vod-trans">"{vodData.title}"</div>
+                <div className="al-vod-ref">Surah {vodData.key}</div>
+              </>
+            ) : (
+              <>
+                <div className="al-vod-arabic">وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥ</div>
+                <div className="al-vod-trans">"Whoever relies upon Allah — then He is sufficient for him."</div>
+                <div className="al-vod-ref">At-Talaq 65:3</div>
+              </>
+            )}
           </div>
 
           <div className="al-tip-card">
             <div className="al-tip-icon"><Star size={18} color="var(--gold)" /></div>
             <div>
-              <div className="al-tip-title">Koko says…</div>
+              <div className="al-tip-title">Powered by Quran Foundation API</div>
               <div className="al-tip-text">
-                You've read 142 verses — you're on a beautiful journey! Try the Lens feature today — point your camera at nature and discover hidden connections.
+                Verses are fetched live from the official Quran Foundation Content API with OAuth2 authentication. Mood matching uses Gemini AI for free-text analysis.
               </div>
             </div>
           </div>
@@ -205,7 +242,6 @@ export default function MoodEntry() {
               <span className="al-card-title">Your Streak</span>
             </div>
             <div className="al-card-body">
-              {/* BACKEND: Streak from Firestore /users/{uid}/streak */}
               <div className="al-streak-days">
                 {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d, i) => (
                   <div key={d} className={`al-streak-day ${i < 4 ? "done" : i === 4 ? "today" : ""}`} />

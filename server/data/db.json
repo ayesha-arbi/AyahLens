@@ -1,0 +1,29 @@
+{
+  "communityPosts": [
+    {
+      "id": "1c37d285-92d7-414b-9f09-2abee3589e70",
+      "source": "ayahlens",
+      "author": "Zara Aslam",
+      "content": "Just scanned a beautiful flower today and read some amazing verses on creation!",
+      "verseKey": null,
+      "type": "post",
+      "createdAt": "2026-05-17T16:05:04.487Z",
+      "likes": 0,
+      "likedBy": []
+    }
+  ],
+  "challenges": [],
+  "userBadges": {},
+  "userProgress": {
+    "user_demo-user": {
+      "completed": [
+        {
+          "challengeId": "help_friend",
+          "completedAt": "2026-05-17T16:05:32.496Z"
+        }
+      ],
+      "totalXp": 20,
+      "streak": 0
+    }
+  }
+}
