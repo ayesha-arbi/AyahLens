@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Play, Pause, BookOpen, BookMarked, Mic2,
   ArrowRight, PenLine, Loader2,
@@ -16,6 +16,18 @@ export default function ReadingJourney() {
   const [reflection, setReflection]           = useState("");
   const [playing, setPlaying]                 = useState(false);
   const [showReflection, setShowReflection]   = useState(false);
+  
+  const audioRef = useRef(null);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   // Load chapters from API
   useEffect(() => {
@@ -28,7 +40,8 @@ export default function ReadingJourney() {
   // Load verses when chapter changes
   useEffect(() => {
     setLoadingVerses(true);
-    apiFetch(`/api/verses/by_chapter/${selectedChapter}?fields=text_uthmani&per_page=10`)
+    // Request audio=7 (Mishary Alafasy) along with text
+    apiFetch(`/api/verses/by_chapter/${selectedChapter}?fields=text_uthmani&audio=7&per_page=10`)
       .then((data) => {
         setVerses(data?.verses || []);
         setVerseIdx(0);
@@ -41,6 +54,34 @@ export default function ReadingJourney() {
   const currentChapter = chapters.find((c) => c.id === selectedChapter);
   const verse = verses[verseIdx];
   const isRead = markedRead.includes(verseIdx);
+
+  // Stop audio when verse changes
+  useEffect(() => {
+    setPlaying(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+  }, [verseIdx, selectedChapter]);
+
+  // Handle actual audio playback
+  useEffect(() => {
+    if (playing && verse?.audio?.url) {
+      const audioUrl = `https://verses.quran.com/${verse.audio.url}`;
+      if (!audioRef.current || audioRef.current.src !== audioUrl) {
+        if (audioRef.current) audioRef.current.pause();
+        audioRef.current = new Audio(audioUrl);
+        audioRef.current.onended = () => setPlaying(false);
+      }
+      audioRef.current.play().catch(e => {
+        console.error("Audio playback error:", e);
+        setPlaying(false);
+      });
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    }
+  }, [playing, verse]);
   const progress = verses.length ? Math.round(((verseIdx + 1) / verses.length) * 100) : 0;
 
   const handleMarkRead = () => {

@@ -57,7 +57,7 @@ export default function MoodEntry() {
     setLoading(true); setSaved(false); setResult(null); setError(null);
     try {
       const body = freeText.trim()
-        ? { mood: "custom", text: freeText }
+        ? { mood: activeMood || "custom", text: freeText }
         : { mood: activeMood };
       const data = await apiPost("/api/mood/match", body);
       if (!data) throw new Error("No response from server");
@@ -69,18 +69,11 @@ export default function MoodEntry() {
     setLoading(false);
   };
 
-  const getFirstVerse = () => {
-    if (!result?.verses) return null;
-    const v = result.verses.find((v) => v.verse);
-    if (!v) return null;
-    return {
-      key: v.key,
-      arabic: v.verse?.text_uthmani || v.verse?.verse_key || v.key,
-      ref: v.key,
-    };
+  // Get all verses that have valid data
+  const getValidVerses = () => {
+    if (!result?.verses) return [];
+    return result.verses.filter((v) => v.verse && v.verse.text_uthmani);
   };
-
-  const firstVerse = getFirstVerse();
 
   return (
     <div>
@@ -99,7 +92,7 @@ export default function MoodEntry() {
             </div>
             <div className="al-card-body">
               <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 12 }}>
-                Choose a mood chip or describe freely — AI-powered matching via Gemini + Quran Foundation API.
+                Choose a mood chip or describe freely — we'll find the perfect Quranic verses for your heart.
               </p>
 
               {/* Mood chips from /api/mood/list */}
@@ -163,47 +156,53 @@ export default function MoodEntry() {
                 </div>
               )}
 
-              {/* Success: verse found */}
-              {result && !loading && firstVerse && (
+              {/* Success: verses found */}
+              {result && !loading && getValidVerses().length > 0 && (
                 <div style={{ marginTop: 16 }}>
-                  <div className="al-ayah-box">
-                    <div className="al-ayah-ref">
-                      {result.emoji} Matched Ayah · Surah {firstVerse.ref}
-                      {result.aiUsed && <span style={{ marginLeft: 8, fontSize: 10, color: "var(--gold)" }}>✨ AI</span>}
-                    </div>
-                    <div className="al-ayah-arabic">{firstVerse.arabic}</div>
-                    <div className="al-ayah-trans">{result.reasoning}</div>
-                    <div className="al-ayah-actions">
-                      <button
-                        className={`al-ayah-btn ${saved ? "green-btn" : ""}`}
-                        onClick={() => setSaved(true)}
-                        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}
-                      >
-                        <BookMarked size={12} /> {saved ? "Saved" : "Save"}
-                      </button>
-                      <button className="al-ayah-btn green-btn"
-                        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                        <Share2 size={12} /> Share
-                      </button>
-                    </div>
+                  {/* Mood header */}
+                  <div style={{ marginBottom: 12, padding: "10px 14px", background: "rgba(46,158,90,.06)", border: "1px solid rgba(46,158,90,.12)", borderRadius: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--green-dark)" }}>
+                      {result.emoji} Detected mood: {result.mood}
+                    </span>
+                    {result.aiUsed && <span style={{ marginLeft: 8, fontSize: 10, color: "var(--gold)" }}>✨ AI</span>}
+                    <p style={{ fontSize: 11.5, color: "var(--ink-mid)", marginTop: 4, fontStyle: "italic" }}>{result.reasoning}</p>
                   </div>
 
-                  {result.verses.filter(v => v.verse).length > 1 && (
-                    <div style={{ marginTop: 10, fontSize: 11, color: "var(--ink-soft)" }}>
-                      <strong>More verses:</strong>{" "}
-                      {result.verses.filter(v => v.verse).slice(1).map((v, i) => (
-                        <span key={i} style={{ marginRight: 8 }}>📖 {v.key}</span>
-                      ))}
+                  {/* All matched verses */}
+                  {getValidVerses().map((v, i) => (
+                    <div key={v.key} className="al-ayah-box" style={{ marginBottom: i < getValidVerses().length - 1 ? 10 : 0 }}>
+                      <div className="al-ayah-ref">📖 Surah {v.key}</div>
+                      <div className="al-ayah-arabic">{v.verse.text_uthmani}</div>
+                      {v.verse.translation && (
+                        <div className="al-ayah-trans" style={{ fontStyle: "italic", lineHeight: 1.6 }}>
+                          "{v.verse.translation}"
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
+
+                  <div className="al-ayah-actions" style={{ marginTop: 10 }}>
+                    <button
+                      className={`al-ayah-btn ${saved ? "green-btn" : ""}`}
+                      onClick={() => setSaved(true)}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}
+                    >
+                      <BookMarked size={12} /> {saved ? "Saved" : "Save All"}
+                    </button>
+                    <button className="al-ayah-btn green-btn"
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                      <Share2 size={12} /> Share
+                    </button>
+                  </div>
                 </div>
               )}
 
               {/* Success: mood matched but no verse text available */}
-              {result && !loading && !firstVerse && (
+              {result && !loading && getValidVerses().length === 0 && (
                 <div style={{ marginTop: 16, textAlign: "center", color: "var(--ink-soft)", fontSize: 12 }}>
                   {result.emoji} Mood matched: <strong>{result.mood}</strong>
                   <br /><em>{result.reasoning}</em>
+                  <br /><span style={{ fontSize: 11, marginTop: 6, display: "inline-block" }}>Verse text temporarily unavailable. Please try again.</span>
                 </div>
               )}
 
