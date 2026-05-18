@@ -53,12 +53,6 @@ export default function DashboardMain() {
     <div className="al-app">
       <aside className={`al-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="al-sidebar-logo">
-          <svg viewBox="0 0 40 40" className="al-logo-svg" fill="none">
-            <path d="M20 2L24.3 15.7L38 20L24.3 24.3L20 38L15.7 24.3L2 20L15.7 15.7L20 2Z" fill="#C8921A" opacity="0.25" />
-            <path d="M20 8L23 17L32 20L23 23L20 32L17 23L8 20L17 17L20 8Z" stroke="#E8C060" strokeWidth="1.8" strokeLinejoin="round" />
-            <circle cx="20" cy="20" r="4" stroke="#C8921A" strokeWidth="1.5" />
-            <circle cx="20" cy="20" r="1.8" fill="#C8921A" />
-          </svg>
           <span className="al-logo-text">AyahLens</span>
         </div>
 
@@ -81,10 +75,9 @@ export default function DashboardMain() {
         </nav>
 
         <div className="al-sidebar-footer">
-          <div className="al-avatar">AL</div>
           <div className="al-avatar-info">
-            <div className="al-avatar-name">AyahLens</div>
-            <div className="al-avatar-meta">Quran Foundation API</div>
+            <div className="al-avatar-name">A peaceful space</div>
+            <div className="al-avatar-meta">Powered by Quran.com</div>
           </div>
         </div>
       </aside>

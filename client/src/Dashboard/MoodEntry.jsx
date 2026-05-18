@@ -78,22 +78,15 @@ export default function MoodEntry() {
   return (
     <div>
       <div className="al-greeting">
-        <h1>Assalamu Alaikum</h1>
-        <p>How are you feeling today? Let AyahLens find the right words for your heart.</p>
+        <h1>How is your heart feeling today?</h1>
+        <p>Take a quiet moment with the Quran. Choose a mood or describe what's weighing on your mind.</p>
       </div>
 
-      <div className="al-two-col">
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div className="al-card">
-            <div className="al-card-header">
-              <div className="al-card-num">1</div>
-              <span className="al-card-title">How are you feeling today?</span>
-              <span className="al-card-tag">Mood Matching</span>
-            </div>
-            <div className="al-card-body">
-              <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 12 }}>
-                Choose a mood chip or describe freely — we'll find the perfect Quranic verses for your heart.
-              </p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "30px", alignItems: "start" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
+          <div className="al-card" style={{ padding: "40px" }}>
+            <h2 className="al-card-title" style={{ textAlign: "center", marginBottom: "30px" }}>I am feeling...</h2>
+            <div className="al-card-body" style={{ padding: 0 }}>
 
               {/* Mood chips from /api/mood/list */}
               {moodsLoading ? (
@@ -120,34 +113,25 @@ export default function MoodEntry() {
                 </div>
               )}
 
-              <div className="al-divider">
-                <div className="al-divider-line" />
-                <span className="al-divider-text">or describe freely</span>
-                <div className="al-divider-line" />
-              </div>
-
               <div className="al-input-row">
                 <input
                   className="al-input"
-                  placeholder='e.g. "I just had a fight with my spouse…"'
+                  placeholder="e.g. I just had a difficult conversation..."
                   value={freeText}
                   onChange={(e) => setFreeText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleMatch()}
                 />
-                <button className="al-btn ghost" style={{ padding: "10px 14px" }} title="Voice input (mobile only)">
-                  <Mic size={16} />
-                </button>
               </div>
 
-              <button
-                className="al-btn"
-                onClick={handleMatch}
-                disabled={loading || (!activeMood && !freeText.trim())}
-                style={{ display: "flex", alignItems: "center", gap: 8 }}
-              >
-                <Send size={14} />
-                {loading ? "Finding verses…" : "Find My Verse"}
-              </button>
+              <div style={{ textAlign: "center" }}>
+                <button
+                  className="al-btn"
+                  onClick={handleMatch}
+                  disabled={loading || (!activeMood && !freeText.trim())}
+                >
+                  {loading ? "Finding your verse..." : "Find My Verse"}
+                </button>
+              </div>
 
               {/* Error state */}
               {error && !loading && (
@@ -216,40 +200,25 @@ export default function MoodEntry() {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Verse of the Day — LIVE from QF API */}
-          <div className="al-vod">
-            <div className="al-vod-label">Verse of the Day</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
+          {/* Verse of the Day */}
+          <div className="al-card" style={{ background: "var(--green-dark)", color: "var(--cream)" }}>
+            <h2 className="al-card-title" style={{ color: "var(--gold)", marginBottom: "20px" }}>Verse of the Day</h2>
             {vodLoading ? (
-              <div style={{ textAlign: "center", padding: "16px 0", color: "var(--ink-soft)", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <Loader2 size={14} className="al-spin" /> Loading…
+              <div style={{ textAlign: "center", padding: "16px 0", color: "var(--gold-light)", fontSize: 14 }}>
+                Loading…
               </div>
             ) : vodData?.verse?.text_uthmani ? (
               <>
-                <div className="al-vod-arabic">{vodData.verse.text_uthmani}</div>
-                <div className="al-vod-trans">"{vodData.title}"</div>
-                <div className="al-vod-ref">Surah {vodData.key}</div>
-              </>
-            ) : vodData?.title ? (
-              <>
-                <div className="al-vod-trans">"{vodData.title}"</div>
-                <div className="al-vod-ref">Surah {vodData.key}</div>
+                <div className="al-ayah-arabic" style={{ fontSize: "28px", marginBottom: "16px", textShadow: "none" }}>{vodData.verse.text_uthmani}</div>
+                <div className="al-ayah-trans" style={{ fontSize: "14px", marginBottom: "10px" }}>"{vodData.title}"</div>
+                <div className="al-ayah-ref" style={{ marginBottom: 0 }}>Surah {vodData.key}</div>
               </>
             ) : (
-              <div style={{ textAlign: "center", padding: "12px 0", color: "var(--ink-soft)", fontSize: 12 }}>
+              <div style={{ textAlign: "center", padding: "12px 0", color: "var(--gold-light)", fontSize: 14 }}>
                 Verse of the day unavailable
               </div>
             )}
-          </div>
-
-          <div className="al-tip-card">
-            <div className="al-tip-icon"><Star size={18} color="var(--gold)" /></div>
-            <div>
-              <div className="al-tip-title">Powered by Quran Foundation API</div>
-              <div className="al-tip-text">
-                Verses are fetched live from the official Quran Foundation Content API with OAuth2 authentication. Mood matching uses Gemini AI for free-text analysis.
-              </div>
-            </div>
           </div>
         </div>
       </div>

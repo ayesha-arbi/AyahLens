@@ -94,82 +94,82 @@ export default function Community() {
   return (
     <div>
       <div className="al-greeting">
-        <h1>Community <em>Feed</em></h1>
-        <p>Share your faith moments — see what your community discovered today.</p>
+        <h1>Community <em>Reflections</em></h1>
+        <p>A quiet space to read how the Quran has touched others today.</p>
       </div>
 
-      <div className="al-two-col">
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div className="al-card">
-            <div className="al-card-header">
-              <div className="al-card-num">4</div>
-              <span className="al-card-title">Share a Moment</span>
-              <span className="al-card-tag">Community</span>
+      <div style={{ maxWidth: "700px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "30px" }}>
+        
+        {/* Share Moment Box */}
+        <div className="al-card" style={{ padding: "30px" }}>
+          <h3 className="al-card-title" style={{ fontSize: "16px", marginBottom: "20px" }}>Write a Reflection</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <textarea 
+              className="al-input" 
+              placeholder="What verse resonated with you today? Share your thoughts..." 
+              value={shareText} 
+              onChange={(e) => setShareText(e.target.value)} 
+              style={{ minHeight: "100px", resize: "none", width: "100%", background: "var(--cream)", border: "1px solid rgba(15, 41, 30, 0.05)", borderRadius: "12px", padding: "16px" }}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <p style={{ fontSize: "12px", color: "var(--ink-soft)" }}>Your reflections are shared anonymously or with your initials.</p>
+              <button className="al-btn" onClick={handleShare} disabled={posting || !shareText.trim()}>
+                {posting ? "Publishing..." : "Publish Reflection"}
+              </button>
             </div>
-            <div className="al-card-body">
-              <div className="al-input-row">
-                <input className="al-input" placeholder='e.g. "Just scanned a tree — this ayah changed my day!"' value={shareText} onChange={(e) => setShareText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleShare()} />
-                <button className="al-btn" onClick={handleShare} disabled={posting || !shareText.trim()} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Send size={14} /> {posting ? "Posting…" : "Post"}
-                </button>
-              </div>
-              <p style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>Share a Lens moment or verse reflection with the community.</p>
-            </div>
-          </div>
-
-          {/* Posts from API */}
-          <div className="al-card">
-            <div className="al-card-header">
-              <span className="al-card-title">Recent Posts</span>
-              <span className="al-card-tag">{posts.length} posts</span>
-            </div>
-            {postsLoading ? (
-              <div style={{ padding: 24, textAlign: "center", color: "var(--ink-soft)", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <Loader2 size={14} className="al-spin" /> Loading posts…
-              </div>
-            ) : posts.length === 0 ? (
-              <div style={{ padding: 24, textAlign: "center", fontSize: 12, color: "var(--ink-soft)" }}>
-                No posts yet — be the first to share a moment!
-              </div>
-            ) : (
-              posts.map((post) => <PostCard key={post.id} post={normalizePost(post)} onLike={handleLike} />)
-            )}
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Community Stats from API */}
-          <div className="al-card">
-            <div className="al-card-header">
-              <BarChart2 size={15} color="var(--gold)" />
-              <span className="al-card-title">Community Stats</span>
+        {/* Posts Feed */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {postsLoading ? (
+            <div style={{ padding: "40px", textAlign: "center", color: "var(--ink-soft)" }}>
+              <Loader2 size={20} className="al-spin" style={{ margin: "0 auto 10px" }} />
+              <p>Loading reflections...</p>
             </div>
-            <div className="al-card-body">
-              {[
-                { label: "Total posts",   value: stats?.totalPosts ?? posts.length },
-                { label: "Total likes",   value: stats?.totalLikes ?? 0 },
-                { label: "Data source",   value: "QF API" },
-              ].map((s) => (
-                <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(200,146,26,.05)" }}>
-                  <span style={{ fontSize: 12, color: "var(--ink-mid)" }}>{s.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--green-dark)", fontFamily: "'Syne', sans-serif" }}>{s.value}</span>
+          ) : posts.length === 0 ? (
+            <div style={{ padding: "60px 20px", textAlign: "center", color: "var(--ink-soft)", background: "#fff", borderRadius: "20px", border: "var(--card-border)" }}>
+              <p>No reflections yet. Be the first to share a moment.</p>
+            </div>
+          ) : (
+            posts.map((post) => (
+              <div key={post.id} className="al-card" style={{ padding: "30px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--cream-mid)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--green-dark)", fontWeight: 600, fontSize: "14px" }}>
+                      {post.initials || "A"}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "15px", fontWeight: 600, color: "var(--green-dark)" }}>{post.name || "Anonymous"}</div>
+                      <div style={{ fontSize: "12px", color: "var(--ink-soft)" }}>{post.meta}</div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+                
+                <p style={{ fontSize: "16px", color: "var(--ink)", lineHeight: "1.8", marginBottom: post.ayah ? "24px" : "16px" }}>
+                  {post.body}
+                </p>
 
-          {/* Info card */}
-          <div className="al-card">
-            <div className="al-card-header">
-              <Users size={15} color="var(--gold)" />
-              <span className="al-card-title">About Community</span>
-            </div>
-            <div className="al-card-body">
-              <p style={{ fontSize: 12, color: "var(--ink-mid)", lineHeight: 1.6 }}>
-                The community feed is powered by a local JSON backend with Quran Reflect integration. Share verse discoveries, lens moments, and reflections with other users.
-              </p>
-            </div>
-          </div>
+                {post.ayah && (
+                  <div style={{ background: "var(--green-dark)", padding: "24px", borderRadius: "16px", marginBottom: "20px" }}>
+                    <div style={{ fontFamily: "'Amiri', serif", color: "var(--cream)", fontSize: "22px", direction: "rtl", marginBottom: "12px", lineHeight: "1.8" }}>
+                      {post.ayah.ar}
+                    </div>
+                    <div style={{ fontSize: "14px", color: "rgba(252, 251, 248, 0.8)", fontStyle: "italic", lineHeight: "1.6" }}>
+                      "{post.ayah.tr}"
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", alignItems: "center", gap: "20px", borderTop: "1px solid rgba(15, 41, 30, 0.05)", paddingTop: "20px" }}>
+                  <button onClick={() => handleLike(post.id)} style={{ display: "flex", alignItems: "center", gap: "8px", background: "none", border: "none", cursor: "pointer", color: post.liked ? "var(--green-dark)" : "var(--ink-soft)", fontWeight: post.liked ? 600 : 400, transition: "color 0.2s" }}>
+                    <Heart size={16} fill={post.liked ? "var(--green-dark)" : "none"} /> 
+                    {post.likes || 0} Appreciations
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

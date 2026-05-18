@@ -62,135 +62,101 @@ export default function DailyChallenges() {
   return (
     <div>
       <div className="al-greeting">
-        <h1>Daily <em>Challenges</em></h1>
-        <p>Complete today's challenges to earn XP, unlock badges, and build your streak.</p>
+        <h1>Daily <em>Motivations</em></h1>
+        <p>Small, gentle steps to stay connected with the Quran today.</p>
       </div>
 
-      {/* Live stats from challenges data */}
-      <div className="al-stats-row">
-        {[
-          { label: "Today's XP",     value: `${xpEarned}/${xpTotal}`, sub: `${done} of ${total} done`, icon: <Star size={18} /> },
-          { label: "Completion",     value: `${progress}%`,           sub: `${total - done} remaining`, icon: <CheckCircle size={18} /> },
-          { label: "Badges Earned",  value: badges.filter(b => b.earned).length, sub: `of ${badges.length} total`, icon: <Medal size={18} /> },
-        ].map((s) => (
-          <div key={s.label} className="al-stat-card">
-            <div className="al-stat-label">{s.label}</div>
-            <div className="al-stat-value">{s.value}</div>
-            <div className="al-stat-sub">{s.sub}</div>
-            <div className="al-stat-icon">{s.icon}</div>
-          </div>
-        ))}
-      </div>
+      <div style={{ maxWidth: "800px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "40px" }}>
+        
+        {/* Progress Overview */}
+        <div className="al-card" style={{ padding: "40px", background: "var(--green-dark)", color: "var(--cream)", textAlign: "center" }}>
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "24px", color: "var(--gold)", marginBottom: "12px" }}>
+            {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}
+          </h3>
+          <p style={{ fontSize: "15px", color: "rgba(252, 251, 248, 0.8)", marginBottom: "30px", maxWidth: "400px", margin: "0 auto 30px" }}>
+            {total - done === 0 
+              ? "You have completed all suggestions for today. May your efforts be accepted." 
+              : `You have ${total - done} gentle suggestions remaining for today.`}
+          </p>
 
-      <div className="al-two-col">
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Progress card */}
-          <div className="al-card">
-            <div className="al-card-header">
-              <span className="al-card-title">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--gold)", fontFamily: "'Syne', sans-serif" }}>{progress}% done</span>
+          <div style={{ display: "flex", justifyContent: "center", gap: "30px", borderTop: "1px solid rgba(252, 251, 248, 0.1)", paddingTop: "30px" }}>
+            <div>
+              <div style={{ fontSize: "32px", fontFamily: "'Playfair Display', serif", color: "var(--gold)" }}>{done}</div>
+              <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.7 }}>Completed</div>
             </div>
-            <div className="al-card-body">
-              <div className="al-progress-wrap" style={{ marginBottom: 4 }}>
-                <div className="al-progress-fill" style={{ width: `${progress}%` }} />
-              </div>
-              <p style={{ fontSize: 10.5, color: "var(--ink-soft)" }}>
-                {total - done} remaining · {xpTotal - xpEarned} XP left to earn
-              </p>
+            <div>
+              <div style={{ fontSize: "32px", fontFamily: "'Playfair Display', serif", color: "var(--gold)" }}>{badges.filter(b => b.earned).length}</div>
+              <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.7 }}>Milestones</div>
             </div>
           </div>
+        </div>
 
-          {/* Filter chips */}
-          <div className="al-chips">
-            {["all","remaining","done"].map((f) => (
-              <span key={f} className={`al-chip ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
-                {f === "all" ? "All challenges" : f === "done" ? "Completed" : "Remaining"}
-              </span>
-            ))}
-          </div>
-
-          {/* Challenge list */}
-          <div className="al-card">
+        {/* Challenge List */}
+        <div>
+          <h3 style={{ fontSize: "18px", fontFamily: "'Playfair Display', serif", color: "var(--green-dark)", marginBottom: "20px" }}>Today's Suggestions</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {challengesLoading ? (
-              <div style={{ padding: 24, textAlign: "center", color: "var(--ink-soft)", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <Loader2 size={14} className="al-spin" /> Loading challenges…
+              <div style={{ padding: "40px", textAlign: "center", color: "var(--ink-soft)" }}>
+                <Loader2 size={20} className="al-spin" style={{ margin: "0 auto 10px" }} />
+                <p>Loading suggestions...</p>
               </div>
-            ) : filtered.length === 0 ? (
-              <div style={{ padding: 24, textAlign: "center", fontSize: 12, color: "var(--ink-soft)" }}>
-                {filter === "done" ? "No completed challenges yet." : filter === "remaining" ? "All challenges completed! 🎉" : "No challenges available today."}
+            ) : challenges.length === 0 ? (
+              <div style={{ padding: "40px", textAlign: "center", color: "var(--ink-soft)", background: "#fff", borderRadius: "20px", border: "var(--card-border)" }}>
+                No suggestions available today.
               </div>
             ) : (
-              filtered.map((c) => (
-                <div key={c.id} className="al-challenge" style={{ padding: "12px 20px" }}>
-                  <div className="al-ch-icon" style={{ color: "var(--green-mid)" }}>
-                    {CHALLENGE_ICONS[c.type] || <Star size={18} />}
+              challenges.map((c) => (
+                <div key={c.id} className="al-card" style={{ padding: "20px 30px", display: "flex", alignItems: "center", gap: "20px", opacity: c.completed ? 0.6 : 1, transition: "opacity 0.3s" }}>
+                  <div style={{ color: c.completed ? "var(--ink-soft)" : "var(--gold)", background: c.completed ? "transparent" : "rgba(184, 147, 92, 0.1)", padding: "12px", borderRadius: "50%" }}>
+                    {CHALLENGE_ICONS[c.type] || <Star size={20} />}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="al-ch-title" style={c.completed ? { textDecoration: "line-through", opacity: .5 } : {}}>
-                      {c.title}
-                    </div>
-                    <div className="al-ch-sub">{c.type} · {c.xp} XP</div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ fontSize: "16px", color: "var(--green-dark)", fontWeight: 600, marginBottom: "4px", textDecoration: c.completed ? "line-through" : "none" }}>{c.title}</h4>
+                    <p style={{ fontSize: "13px", color: "var(--ink-soft)" }}>A gentle {c.type} step for your day</p>
                   </div>
-                  {c.completed ? (
-                    <span className="al-ch-pts done" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <CheckCircle size={11} /> +{c.xp} XP
-                    </span>
-                  ) : (
-                    <button className="al-btn sm ghost" onClick={() => handleComplete(c.id)}
-                      style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10 }}>
-                      <Circle size={10} /> Complete
-                    </button>
-                  )}
+                  <div>
+                    {c.completed ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--green-mid)", fontSize: "13px", fontWeight: 600 }}>
+                        <CheckCircle size={16} /> Completed
+                      </div>
+                    ) : (
+                      <button 
+                        className="al-btn" 
+                        onClick={() => handleComplete(c.id)}
+                        style={{ padding: "10px 20px", background: "transparent", border: "1px solid var(--gold)", color: "var(--gold)", fontSize: "13px" }}
+                      >
+                        Mark Complete
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Badges from API */}
-          <div className="al-card">
-            <div className="al-card-header">
-              <Medal size={15} color="var(--gold)" />
-              <span className="al-card-title">Badges</span>
-              <span className="al-card-tag">{badges.filter(b => b.earned).length} earned</span>
-            </div>
-            <div className="al-card-body">
-              {badgesLoading ? (
-                <div style={{ textAlign: "center", padding: 16, color: "var(--ink-soft)", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                  <Loader2 size={14} className="al-spin" /> Loading badges…
-                </div>
-              ) : badges.length === 0 ? (
-                <div style={{ textAlign: "center", padding: 16, fontSize: 12, color: "var(--ink-soft)" }}>
-                  No badges available yet.
-                </div>
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                  {badges.map((b) => (
-                    <div key={b.id} style={{ textAlign: "center", padding: "10px 6px", borderRadius: 10, background: b.earned ? "rgba(200,146,26,.08)" : "rgba(11,61,32,.04)", border: b.earned ? "1px solid rgba(200,146,26,.2)" : "1px solid rgba(11,61,32,.06)", opacity: b.earned ? 1 : 0.4 }}>
-                      <div style={{ display: "flex", justifyContent: "center", marginBottom: 4, color: b.earned ? "var(--gold)" : "var(--ink-soft)" }}>{BADGE_ICONS[b.id] || <Star size={18} />}</div>
-                      <div style={{ fontSize: 9, color: b.earned ? "var(--gold)" : "var(--ink-soft)", fontWeight: 700, fontFamily: "'Syne', sans-serif" }}>{b.name}</div>
-                      <div style={{ fontSize: 16, marginTop: 2 }}>{b.icon}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* API info */}
-          <div className="al-card">
-            <div className="al-card-header">
-              <BarChart2 size={15} color="var(--gold)" />
-              <span className="al-card-title">Challenge System</span>
-            </div>
-            <div className="al-card-body">
-              <p style={{ fontSize: 12, color: "var(--ink-mid)", lineHeight: 1.6 }}>
-                Challenges rotate daily and are served from the backend API. Complete challenges to earn XP and unlock badges. All progress is saved server-side.
-              </p>
-            </div>
+        {/* Milestones */}
+        <div>
+          <h3 style={{ fontSize: "18px", fontFamily: "'Playfair Display', serif", color: "var(--green-dark)", marginBottom: "20px" }}>Your Milestones</h3>
+          <div className="al-card" style={{ padding: "30px" }}>
+            {badgesLoading ? (
+              <div style={{ textAlign: "center", color: "var(--ink-soft)" }}>Loading milestones...</div>
+            ) : badges.length === 0 ? (
+              <div style={{ textAlign: "center", color: "var(--ink-soft)" }}>No milestones yet.</div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "20px" }}>
+                {badges.map((b) => (
+                  <div key={b.id} style={{ textAlign: "center", padding: "20px", borderRadius: "16px", background: b.earned ? "rgba(184, 147, 92, 0.05)" : "transparent", border: b.earned ? "1px solid rgba(184, 147, 92, 0.2)" : "1px dashed rgba(15, 41, 30, 0.1)", opacity: b.earned ? 1 : 0.5, transition: "all 0.3s" }}>
+                    <div style={{ fontSize: "28px", marginBottom: "12px" }}>{b.icon}</div>
+                    <div style={{ fontSize: "13px", color: "var(--green-dark)", fontWeight: 600, marginBottom: "4px" }}>{b.name}</div>
+                    <div style={{ fontSize: "11px", color: "var(--ink-soft)" }}>{b.earned ? "Achieved" : "Locked"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+
       </div>
     </div>
   );
