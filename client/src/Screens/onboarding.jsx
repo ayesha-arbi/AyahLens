@@ -856,6 +856,60 @@ function StepKnowledge({ profile, setProfile, onNext }) {
 // ── STEP 5: FAVOURITE SURAH + RECITER ────────
 // ─────────────────────────────────────────────
 function StepPreferences({ profile, setProfile, onNext }) {
+  const [playingReciter, setPlayingReciter] = useState(null);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleReciterClick = (reciterId) => {
+    const RECITER_MAP = {
+      husary: 'ar.husary',
+      mishary: 'ar.alafasy',
+      sudais: 'ar.sudais',
+      minshawi: 'ar.minshawi',
+    };
+
+    // If clicking the currently playing reciter, pause it
+    if (playingReciter === reciterId) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setPlayingReciter(null);
+      return;
+    }
+
+    // Otherwise, play the new one
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    setProfile(p => ({ ...p, reciter: reciterId }));
+
+    const edition = RECITER_MAP[reciterId] || 'ar.husary';
+    // We play Ayah 1 (Bismillahir Rahmanir Rahim) as a beautiful preview
+    const url = `https://cdn.islamic.network/quran/audio/128/${edition}/1.mp3`;
+
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    setPlayingReciter(reciterId);
+
+    audio.play().catch(err => {
+      console.error("Audio preview failed to play:", err);
+      setPlayingReciter(null);
+    });
+
+    audio.onended = () => {
+      setPlayingReciter(null);
+    };
+  };
+
   return (
     <div className="anim-slide-up">
       <KokoHeader message={KOKO_LINES[5]} step={5} />
@@ -891,13 +945,20 @@ function StepPreferences({ profile, setProfile, onNext }) {
           <div
             key={r.id}
             className={`option-card ${profile.reciter === r.id ? 'selected' : ''}`}
-            onClick={() => setProfile(p => ({ ...p, reciter: r.id }))}
+            onClick={() => handleReciterClick(r.id)}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px' }}
           >
             <div style={{ width: 34, height: 34, borderRadius: '50%', background: profile.reciter === r.id ? '#C8921A' : 'rgba(11,61,32,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}>
-              <svg width="10" height="12" viewBox="0 0 10 12" fill="none">
-                <path d="M1 1l8 5-8 5V1z" fill={profile.reciter === r.id ? '#0B3D20' : '#2E9E5A'}/>
-              </svg>
+              {playingReciter === r.id ? (
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="none">
+                  <rect x="2" y="2" width="2" height="8" fill="#0B3D20"/>
+                  <rect x="6" y="2" width="2" height="8" fill="#0B3D20"/>
+                </svg>
+              ) : (
+                <svg width="10" height="12" viewBox="0 0 10 12" fill="none">
+                  <path d="M1 1l8 5-8 5V1z" fill={profile.reciter === r.id ? '#0B3D20' : '#2E9E5A'}/>
+                </svg>
+              )}
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: '.85rem', fontWeight: 600, color: '#18120A' }}>{r.name}</p>
@@ -914,7 +975,12 @@ function StepPreferences({ profile, setProfile, onNext }) {
         ))}
       </div>
 
-      <button className="btn-primary" onClick={onNext}>
+      <button className="btn-primary" onClick={() => {
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+        onNext();
+      }}>
         Continue
       </button>
     </div>
