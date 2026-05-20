@@ -1,1030 +1,1096 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from "react-router-dom";
-// ==========================================
-// 1. GLOBAL STYLES (Injected safely)
-// ==========================================
-const customStyles = `
-  * { box-sizing: border-box; }
-  
-  html { 
-    scroll-snap-type: y proximity; 
-    scroll-behaviour: smooth; 
-  }
-  
-  body { 
-    font-family: 'DM Sans', sans-serif; 
-    background: #FAF6EE; 
-    color: #18120A; 
-    overflow-x: hidden;
-    cursor: none;
-  }
 
-  a, button, [role="button"], .chip, .feat-card, nav a {
-    cursor: none !important;
-  }
+// ── Fonts ────────────────────────────────────────────────────────────────────
+const FONT_URL =
+  "https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700&display=swap";
 
-  body::after { 
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:9999; opacity:.3; 
-    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E"); 
-  }
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const T = {
+  forest:      '#0B3D20',
+  forestMid:   '#1B6B3C',
+  forestLight: '#2E9E5A',
+  gold:        '#C8921A',
+  goldLight:   '#E8C060',
+  goldPale:    '#F6E8C0',
+  cream:       '#FAF6EE',
+  parchment:   '#F0E6D0',
+  ink:         '#18120A',
+  inkMid:      '#4A3D28',
+  inkSoft:     '#8A7A60',
+};
 
-  .star-tile { 
-    background-image:url("data:image/svg+xml,%3Csvg width='56' height='56' viewBox='0 0 56 56' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%230B3D20' stroke-width='.35' opacity='.1'%3E%3Cpolygon points='28,4 32,20 48,20 36,30 40,46 28,37 16,46 20,30 8,20 24,20'/%3E%3Crect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/%3E%3C/g%3E%3C/svg%3E"); 
-    background-size:56px; 
-    background-attachment: fixed; 
-  }
+// ── Global CSS ────────────────────────────────────────────────────────────────
+const GLOBAL_CSS = `
+@import url('${FONT_URL}');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: ${T.cream};
+  color: ${T.ink};
+  overflow-x: hidden;
+  cursor: none;
+}
+a, button, [role="button"] { cursor: none !important; }
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: ${T.gold}; border-radius: 2px; }
 
-  .font-arabic { font-family:'Amiri',serif; }
-  .font-display { font-family:'Instrument Serif',serif; }
-  .font-heading { font-family:'Syne',sans-serif; }
-  
-  .reveal { 
-    opacity: 0; 
-    transition: all 0.9s cubic-bezier(0.17, 0.84, 0.44, 1); 
-    will-change: opacity, transform, filter;
-  }
-  .reveal-up { transform: translateY(50px); }
-  .reveal-down { transform: translateY(-50px); }
-  .reveal-left { transform: translateX(50px); }
-  .reveal-right { transform: translateX(-50px); }
-  .reveal-zoom { transform: scale(0.85); }
-  .reveal-blur { transform: translateY(30px) scale(0.95); filter: blur(12px); }
+#cursor-dot {
+  position: fixed; top: 0; left: 0;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: ${T.gold}; pointer-events: none;
+  z-index: 99999; transform: translate(-50%,-50%);
+  transition: width .15s, height .15s; will-change: transform;
+}
+#cursor-ring {
+  position: fixed; top: 0; left: 0;
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid rgba(200,146,26,.6);
+  pointer-events: none; z-index: 99998;
+  transform: translate(-50%,-50%);
+  transition: width .35s cubic-bezier(.17,.84,.44,1),
+              height .35s cubic-bezier(.17,.84,.44,1),
+              border-color .3s, background .3s;
+  will-change: transform;
+}
+#cursor-ring.is-link    { width:52px; height:52px; border-color:rgba(46,158,90,.55); background:rgba(46,158,90,.05); }
+#cursor-ring.is-heading { width:80px; height:80px; border-color:rgba(200,146,26,.35); background:rgba(200,146,26,.06); }
 
-  .reveal.in { opacity: 1; transform: translate(0, 0) scale(1); filter: blur(0px); }
-  
-  .phone { background:#0B3D20; color:#E8C060; border-radius:38px; box-shadow: 0 40px 80px rgba(11,61,32,.4), 0 0 0 7px rgba(200,146,26,.18), inset 0 0 0 1px rgba(255,255,255,.07); overflow:hidden; position:relative; }
-  .feat-card { background:#fff; border:1.5px solid rgba(200,146,26,.14); border-radius:22px; transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease; }
-  .feat-card:hover { transform:translateY(-5px); box-shadow:0 24px 56px rgba(11,61,32,.1); border-color:rgba(200,146,26,.35); }
-  .ring { position:absolute; inset:0; border-radius:50%; border:1.5px solid rgba(200,146,26,.55); }
-  
-  .tag { display:inline-flex; align-items:center; gap:5px; background:#0B3D20; color:#E8C060; border: 1px solid rgba(200,146,26,0.3); font-size:.68rem; font-weight:700; padding:3px 10px; border-radius:100px; letter-spacing:.04em; }
-  .tag-gold { background:#C8921A; color:#0B3D20; border:none; }
-  
-  .chip { background:rgba(11,61,32,.08); border:1px solid rgba(11,61,32,.15); color:#1B6B3C; font-size:.62rem; padding:3px 9px; border-radius:100px; cursor:none; transition: 0.2s all; font-weight:600; }
-  .chip.on { background:#C8921A; border-color:#C8921A; color:#0B3D20; font-weight:800; }
-  
-  .bar { width:36px; height:2px; background:linear-gradient(90deg,#C8921A,#E8C060); border-radius:1px; }
-  .vcard { background:linear-gradient(135deg,rgba(200,146,26,.1),rgba(46,158,90,.07)); border:1px solid rgba(200,146,26,.22); border-radius:16px; }
-  
-  ::-webkit-scrollbar { width:3px; } ::-webkit-scrollbar-thumb { background:#C8921A; border-radius:2px; }
-  
-  @keyframes hackGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(200,146,26,.4); } 50% { box-shadow: 0 0 0 8px rgba(200,146,26,0); } }
-  .hack-badge { animation: hackGlow 2s ease-in-out infinite; }
-  @keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-12px) } }
-  @keyframes pulseRing { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(2.4); opacity: 0; } }
-  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-  
-  .animate-float { animation: float 3.5s ease-in-out infinite; }
-  .animate-float-delay { animation: float 3.5s ease-in-out infinite 1.2s; }
-  .animate-pulse-ring { animation: pulseRing 2s ease-out infinite; }
-  .animate-pulse-ring2 { animation: pulseRing 2s ease-out infinite 0.65s; }
-  .animate-pulse-ring3 { animation: pulseRing 2s ease-out infinite 1.3s; }
-  .animate-blink { animation: blink 2s ease-in-out infinite; }
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:9999; opacity:.25;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+}
 
-  /* ── Custom Cursor ── */
-  #cursor-dot {
-    position: fixed;
-    top: 0; left: 0;
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #C8921A;
-    pointer-events: none;
-    z-index: 99999;
-    transform: translate(-50%, -50%);
-    transition: width 0.15s ease, height 0.15s ease, background 0.2s ease;
-    will-change: transform;
-  }
+@keyframes float      { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-12px)} }
+@keyframes pulseRing  { 0%{transform:scale(1);opacity:.7}  100%{transform:scale(2.4);opacity:0} }
+@keyframes blink      { 0%,100%{opacity:1}                 50%{opacity:.35} }
+@keyframes hackGlow   { 0%,100%{box-shadow:0 0 0 0 rgba(200,146,26,.4)} 50%{box-shadow:0 0 0 8px rgba(200,146,26,0)} }
+@keyframes revealUp   { from{opacity:0;transform:translateY(40px)}  to{opacity:1;transform:translateY(0)} }
+@keyframes revealZoom { from{opacity:0;transform:scale(.88)}         to{opacity:1;transform:scale(1)} }
+@keyframes revealLeft { from{opacity:0;transform:translateX(40px)}  to{opacity:1;transform:translateX(0)} }
+@keyframes revealRight{ from{opacity:0;transform:translateX(-40px)} to{opacity:1;transform:translateX(0)} }
+@keyframes revealBlur { from{opacity:0;transform:translateY(24px);filter:blur(10px)} to{opacity:1;transform:translateY(0);filter:blur(0)} }
 
-  #cursor-ring {
-    position: fixed;
-    top: 0; left: 0;
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(200, 146, 26, 0.6);
-    pointer-events: none;
-    z-index: 99998;
-    transform: translate(-50%, -50%);
-    transition: width 0.35s cubic-bezier(0.17, 0.84, 0.44, 1),
-                height 0.35s cubic-bezier(0.17, 0.84, 0.44, 1),
-                border-color 0.3s ease,
-                background 0.3s ease;
-    will-change: transform, width, height;
-  }
-
-  #cursor-ring.is-heading {
-    width: 80px;
-    height: 80px;
-    border-color: rgba(200, 146, 26, 0.35);
-    background: rgba(200, 146, 26, 0.06);
-  }
-
-  #cursor-ring.is-link {
-    width: 52px;
-    height: 52px;
-    border-color: rgba(46, 158, 90, 0.55);
-    background: rgba(46, 158, 90, 0.05);
-  }
+.reveal-up    { opacity:0; }
+.reveal-zoom  { opacity:0; }
+.reveal-left  { opacity:0; }
+.reveal-right { opacity:0; }
+.reveal-blur  { opacity:0; }
+.reveal-up.in    { animation: revealUp    .9s cubic-bezier(.17,.84,.44,1) forwards; }
+.reveal-zoom.in  { animation: revealZoom  .9s cubic-bezier(.17,.84,.44,1) forwards; }
+.reveal-left.in  { animation: revealLeft  .9s cubic-bezier(.17,.84,.44,1) forwards; }
+.reveal-right.in { animation: revealRight .9s cubic-bezier(.17,.84,.44,1) forwards; }
+.reveal-blur.in  { animation: revealBlur  .9s cubic-bezier(.17,.84,.44,1) forwards; }
 `;
 
-// ==========================================
-// 2. CUSTOM CURSOR COMPONENT
-// ==========================================
+// ── Shared style helpers ──────────────────────────────────────────────────────
+const tag = (gold = false) => ({
+  display: 'inline-flex', alignItems: 'center', gap: 5,
+  background: gold ? T.gold : T.forest,
+  color: gold ? T.forest : T.goldLight,
+  border: gold ? 'none' : `1px solid rgba(200,146,26,.3)`,
+  fontSize: '.68rem', fontWeight: 700, padding: '3px 10px',
+  borderRadius: 100, letterSpacing: '.04em',
+  fontFamily: "'Syne', sans-serif",
+});
 
+const chip = (active = false) => ({
+  background: active ? T.gold : 'rgba(11,61,32,.08)',
+  border: `1px solid ${active ? T.gold : 'rgba(11,61,32,.15)'}`,
+  color: active ? T.forest : T.forestMid,
+  fontSize: '.62rem', padding: '3px 9px',
+  borderRadius: 100, fontWeight: active ? 800 : 600,
+  cursor: 'none', transition: '.2s all',
+  fontFamily: "'Syne', sans-serif",
+});
+
+const vcard = {
+  background: 'linear-gradient(135deg,rgba(200,146,26,.1),rgba(46,158,90,.07))',
+  border: `1px solid rgba(200,146,26,.22)`, borderRadius: 16,
+};
+
+const featCard = {
+  background: '#fff',
+  border: `1.5px solid rgba(200,146,26,.14)`,
+  borderRadius: 22,
+  transition: 'transform .3s ease, box-shadow .3s ease, border-color .3s ease',
+};
+
+const starTileBg = {
+  backgroundImage: `url("data:image/svg+xml,%3Csvg width='56' height='56' viewBox='0 0 56 56' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%230B3D20' stroke-width='.35' opacity='.1'%3E%3Cpolygon points='28,4 32,20 48,20 36,30 40,46 28,37 16,46 20,30 8,20 24,20'/%3E%3Crect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/%3E%3C/g%3E%3C/svg%3E")`,
+  backgroundSize: 56,
+};
+
+const phone = {
+  background: T.forest,
+  color: T.goldLight,
+  borderRadius: 38,
+  boxShadow: `0 40px 80px rgba(11,61,32,.4), 0 0 0 7px rgba(200,146,26,.18), inset 0 0 0 1px rgba(255,255,255,.07)`,
+  overflow: 'hidden',
+  position: 'relative',
+};
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
+function useReveal() {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.unobserve(el); } },
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, visible];
+}
+
+// ── Reveal wrapper ────────────────────────────────────────────────────────────
+// NOTE: Always closes with </Reveal> — never uses `as` prop with a heading tag
+// to avoid OXC JSX closing-tag mismatch errors.
+function Reveal({ children, variant = 'up', delay = 0, style = {} }) {
+  const [ref, visible] = useReveal();
+  return (
+    <div
+      ref={ref}
+      className={`reveal-${variant}${visible ? ' in' : ''}`}
+      style={{ animationDelay: `${delay}ms`, ...style }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ── Custom Cursor ─────────────────────────────────────────────────────────────
 function CustomCursor() {
-  const dotRef = useRef(null);
+  const dotRef  = useRef(null);
   const ringRef = useRef(null);
-  const pos = useRef({ x: -100, y: -100 });
+  const pos     = useRef({ x: -100, y: -100 });
   const ringPos = useRef({ x: -100, y: -100 });
-  const rafRef = useRef(null);
+  const raf     = useRef(null);
 
   useEffect(() => {
-    const dot = dotRef.current;
+    const dot  = dotRef.current;
     const ring = ringRef.current;
     if (!dot || !ring) return;
+
+    const lerp = (a, b, t) => a + (b - a) * t;
 
     const onMove = (e) => {
       pos.current = { x: e.clientX, y: e.clientY };
       dot.style.transform = `translate(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%))`;
     };
-
-    const lerp = (a, b, t) => a + (b - a) * t;
-
     const animate = () => {
       ringPos.current.x = lerp(ringPos.current.x, pos.current.x, 0.12);
       ringPos.current.y = lerp(ringPos.current.y, pos.current.y, 0.12);
       ring.style.transform = `translate(calc(${ringPos.current.x}px - 50%), calc(${ringPos.current.y}px - 50%))`;
-      rafRef.current = requestAnimationFrame(animate);
+      raf.current = requestAnimationFrame(animate);
     };
-
     const onOver = (e) => {
       const el = e.target;
-      if (el.matches('h1, h2, h3, h4, [class*="font-display"], em')) {
-        ring.classList.add('is-heading');
-        ring.classList.remove('is-link');
-      } else if (el.matches('a, button, .chip, [role="button"]')) {
-        ring.classList.add('is-link');
-        ring.classList.remove('is-heading');
+      if (el.matches('h1,h2,h3,h4,em')) {
+        ring.classList.add('is-heading'); ring.classList.remove('is-link');
+      } else if (el.matches('a,button,[role="button"]')) {
+        ring.classList.add('is-link'); ring.classList.remove('is-heading');
       } else {
-        ring.classList.remove('is-heading', 'is-link');
+        ring.classList.remove('is-heading','is-link');
       }
     };
 
     window.addEventListener('mousemove', onMove, { passive: true });
     window.addEventListener('mouseover', onOver, { passive: true });
-    rafRef.current = requestAnimationFrame(animate);
-
+    raf.current = requestAnimationFrame(animate);
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseover', onOver);
-      cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(raf.current);
     };
   }, []);
 
   return (
     <>
-      <div id="cursor-dot" ref={dotRef} />
+      <div id="cursor-dot"  ref={dotRef}  />
       <div id="cursor-ring" ref={ringRef} />
     </>
   );
 }
 
-// ==========================================
-// 3. HELPER COMPONENTS & HOOKS
-// ==========================================
-
-function Reveal({ as: Component = 'div', children, className = '', style = {}, variant = 'up', delay = 0 }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(true);
-        observer.unobserve(entry.target);
-      }
-    }, {
-      threshold: 0.15,
-      rootMargin: '0px 0px -50px 0px'
-    });
-
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <Component
-      ref={ref}
-      className={`reveal reveal-${variant} ${isVisible ? 'in' : ''} ${className}`}
-      style={{ ...style, transitionDelay: `${delay}ms` }}
-    >
-      {children}
-    </Component>
-  );
-}
-
-function ChipGroup({ chips, initial, className = '' }) {
+// ── ChipGroup ─────────────────────────────────────────────────────────────────
+function ChipGroup({ chips, initial }) {
   const [active, setActive] = useState(initial || chips[0]);
   return (
-    <div className={`flex flex-wrap gap-1.5 ${className}`}>
-      {chips.map(chip => (
-        <span key={chip} onClick={() => setActive(chip)} className={`chip ${active === chip ? 'on' : ''}`}>
-          {chip}
-        </span>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      {chips.map(c => (
+        <span key={c} onClick={() => setActive(c)} style={chip(active === c)}>{c}</span>
       ))}
     </div>
   );
 }
 
-// ==========================================
-// 4. INTERNAL SECTIONS
-// ==========================================
-
-function Navbar() {
-   const navigate = useNavigate(); // ✅ add here
+// ── Layout helpers ────────────────────────────────────────────────────────────
+function Section({ id, bg, children, style = {} }) {
   return (
+    <section id={id} style={{ position: 'relative', padding: '80px 0', background: bg || T.cream, overflow: 'hidden', ...style }}>
+      {children}
+    </section>
+  );
+}
 
-    <nav className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-5 md:px-10 py-3.5"
-      style={{ background: 'rgba(250,246,238,.9)', backdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(200,146,26,.12)' }}>
-      <div className="flex items-center gap-2.5">
-        <svg viewBox="0 0 40 40" className="w-9 h-9 drop-shadow-sm" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 2L24.3 15.7L38 20L24.3 24.3L20 38L15.7 24.3L2 20L15.7 15.7L20 2Z" fill="#C8921A" opacity="0.3" />
-          <path d="M20 8L23 17L32 20L23 23L20 32L17 23L8 20L17 17L20 8Z" stroke="#0B3D20" strokeWidth="2" strokeLinejoin="round" />
-          <circle cx="20" cy="20" r="5" stroke="#C8921A" strokeWidth="2" />
-          <circle cx="20" cy="20" r="2" fill="#0B3D20" />
-        </svg>
-        <span className="font-heading font-bold text-lg text-[#0B3D20] tracking-tight">AyahLens</span>
+function Container({ children }) {
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 40px', position: 'relative', zIndex: 1 }}>
+      {children}
+    </div>
+  );
+}
+
+function TwoCol({ left, right, reverse = false }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 48, alignItems: 'center' }}>
+      <div style={{ order: reverse ? 2 : 1 }}>{left}</div>
+      <div style={{ order: reverse ? 1 : 2, display: 'flex', justifyContent: 'center' }}>{right}</div>
+    </div>
+  );
+}
+
+function FeatureLabel({ n, label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <span style={{
+        width: 36, height: 36, borderRadius: '50%',
+        background: T.forest, color: T.goldLight,
+        fontFamily: "'Syne', sans-serif", fontWeight: 800,
+        fontSize: '.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>{n}</span>
+      <span style={tag()}>{label}</span>
+      <div style={{ width: 36, height: 2, background: `linear-gradient(90deg,${T.gold},${T.goldLight})`, borderRadius: 1 }} />
+    </div>
+  );
+}
+
+function FeatureTitle({ line1, em, dark = false }) {
+  return (
+    <h2 style={{
+      fontFamily: "'Instrument Serif', serif",
+      fontSize: 'clamp(2rem, 4vw, 3rem)',
+      fontWeight: 400, lineHeight: 1.1,
+      color: dark ? T.goldLight : T.forest,
+      marginBottom: 16,
+    }}>
+      {line1}<br /><em style={{ fontStyle: 'italic', color: T.gold }}>{em}</em>
+    </h2>
+  );
+}
+
+function BulletList({ items, dark = false }) {
+  return (
+    <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+      {items.map(item => (
+        <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '.875rem', color: dark ? `${T.goldPale}cc` : T.inkMid }}>
+          <span style={{ color: T.gold, marginTop: 2, flexShrink: 0 }}>✦</span>
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PhoneShell({ children, height = 510 }) {
+  return (
+    <div style={{ ...phone, width: 256, height, flexShrink: 0 }}>
+      <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 80, height: 20, background: '#000', borderRadius: '0 0 24px 24px', zIndex: 10 }} />
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '36px 20px 20px' }}>
+        {children}
       </div>
-      <div className="hidden md:flex items-center gap-1 text-xs font-body">
+    </div>
+  );
+}
+
+// ── Navbar ────────────────────────────────────────────────────────────────────
+function Navbar() {
+  return (
+    <nav style={{
+      position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '14px 40px',
+      background: 'rgba(250,246,238,.9)', backdropFilter: 'blur(14px)',
+      borderBottom: `1px solid rgba(200,146,26,.12)`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <svg viewBox="0 0 40 40" style={{ width: 36, height: 36 }} fill="none">
+          <path d="M20 2L24.3 15.7L38 20L24.3 24.3L20 38L15.7 24.3L2 20L15.7 15.7L20 2Z" fill={T.gold} opacity="0.3" />
+          <path d="M20 8L23 17L32 20L23 23L20 32L17 23L8 20L17 17L20 8Z" stroke={T.forest} strokeWidth="2" strokeLinejoin="round" />
+          <circle cx="20" cy="20" r="5" stroke={T.gold} strokeWidth="2" />
+          <circle cx="20" cy="20" r="2" fill={T.forest} />
+        </svg>
+        <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: '1.1rem', color: T.forest }}>AyahLens</span>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {['Mood', 'Journey', 'Lens ✨', 'Community', 'Onboarding'].map((item, i) => (
-          <a key={item} href={`#feat${i + 1}`} className="px-3 py-1.5 text-[#4A3D28] hover:text-[#0B3D20] rounded-lg hover:bg-[#F0E6D0] transition-all">
-            {item}
-          </a>
+          <a
+            key={item}
+            href={`#feat${i + 1}`}
+            style={{ padding: '6px 12px', fontSize: '.75rem', color: T.inkMid, fontFamily: "'DM Sans', sans-serif", textDecoration: 'none', borderRadius: 8, transition: 'all .2s' }}
+            onMouseEnter={e => { e.target.style.color = T.forest; e.target.style.background = '#F0E6D0'; }}
+            onMouseLeave={e => { e.target.style.color = T.inkMid; e.target.style.background = 'transparent'; }}
+          >{item}</a>
         ))}
       </div>
-      <div className="flex items-center gap-2">
-        <span className="hack-badge hidden sm:flex items-center gap-1.5 bg-[#F6E8C0] border border-[#C8921A]/30 text-[#C8921A] text-xs font-heading font-semibold px-3 py-1.5 rounded-full">
-          🚀 Hackathon Demo
-        </span>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: '#F6E8C0', border: `1px solid rgba(200,146,26,.3)`,
+          color: T.gold, fontSize: '.72rem', fontFamily: "'Syne', sans-serif", fontWeight: 700,
+          padding: '6px 14px', borderRadius: 100,
+          animation: 'hackGlow 2s ease-in-out infinite',
+        }}>🚀 Hackathon Demo</span>
         <button
-          onClick={() => navigate("/onboarding")}
-          className="bg-[#0B3D20] text-[#E8C060] text-xs font-heading font-semibold px-4 py-2 rounded-full hover:bg-[#1B6B3C] transition-all hover:-translate-y-0.5"
-          style={{ boxShadow: '0 4px 14px rgba(11,61,32,.25)' }}
-        >
-          Try App
-        </button>
+  style={{
+    background: T.forest,
+    color: T.goldLight,
+    fontSize: '.72rem',
+    fontFamily: "'Syne', sans-serif",
+    fontWeight: 700,
+    padding: '8px 18px',
+    borderRadius: 100,
+    border: 'none',
+    boxShadow: '0 4px 14px rgba(11,61,32,.25)',
+    transition: 'all .2s',
+  }}
+  onMouseEnter={e => {
+    e.target.style.background = T.forestMid;
+    e.target.style.transform = 'translateY(-2px)';
+  }}
+  onMouseLeave={e => {
+    e.target.style.background = T.forest;
+    e.target.style.transform = 'translateY(0)';
+  }}
+  onClick={() => window.location.href = '/dashboard'}
+>
+  Try App
+</button>
       </div>
     </nav>
   );
 }
 
+// ── Hero ──────────────────────────────────────────────────────────────────────
 function Hero() {
   return (
-    <section className="snap-start relative min-h-screen pt-20 pb-10 flex flex-col items-center justify-center overflow-hidden star-tile">
-      <div className="absolute inset-0 pointer-events-none bg-fixed" style={{ background: 'radial-gradient(ellipse 65% 55% at 50% 35%, rgba(46,158,90,.08), transparent 70%)' }}></div>
+    <section style={{
+      position: 'relative', minHeight: '100vh',
+      paddingTop: 80, paddingBottom: 40,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      overflow: 'hidden', background: T.cream,
+      ...starTileBg,
+    }}>
+      <div style={{ ...starTileBg, position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 65% 55% at 50% 35%, rgba(46,158,90,.08), transparent 70%)' }} />
 
-      <Reveal variant="down" delay={100} as="p" className="font-arabic text-2xl text-[#0B3D20]/30 mb-5" style={{ direction: 'rtl' }}>
-        بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+      {/* Bismillah */}
+      <Reveal variant="blur" delay={100} style={{ marginBottom: 20 }}>
+        <p style={{ fontFamily: "'Amiri', serif", fontSize: '1.5rem', color: `${T.forest}55`, direction: 'rtl' }}>
+          بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+        </p>
       </Reveal>
 
-      <Reveal variant="blur" delay={200} className="flex flex-wrap items-center justify-center gap-2 mb-7">
-        <span className="tag">🕌 Islamic App</span>
-        <span className="tag-gold tag">⏱ Built in 7 days</span>
-        <span className="tag">📱 Flutter + Firebase</span>
-        <span className="tag-gold tag">🤖 ML Kit + LLM</span>
+      {/* Tags row */}
+      <Reveal variant="blur" delay={200} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 28 }}>
+        <span style={tag()}>🕌 Islamic App</span>
+        <span style={tag(true)}>⏱ Built in 7 days</span>
+        <span style={tag()}>📱 Flutter + Firebase</span>
+        <span style={tag(true)}>🤖 ML Kit + LLM</span>
       </Reveal>
 
-      <Reveal variant="zoom" delay={300} as="h1" className="font-display text-center text-5xl md:text-7xl font-normal text-[#0B3D20] leading-[1.05] max-w-3xl px-4">
-        Find Verses That<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Speaks to You</em>
+      {/* Hero headline — wrapped in div, NOT using `as` prop */}
+      <Reveal variant="zoom" delay={300} style={{ textAlign: 'center', maxWidth: 700, padding: '0 16px', marginBottom: 12 }}>
+        <h1 style={{
+          fontFamily: "'Instrument Serif', serif",
+          fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+          fontWeight: 400, color: T.forest,
+          lineHeight: 1.05,
+        }}>
+          Find Verses That<br />
+          <em style={{ fontStyle: 'italic', color: T.gold }}>Speaks to You</em>
+        </h1>
       </Reveal>
 
-      <Reveal variant="right" delay={450} as="p" className="font-display text-xl md:text-2xl text-[#0B3D20]/60 mt-3 mb-3" style={{ fontStyle: 'italic' }}>Point, read, grow.</Reveal>
-
-      <Reveal variant="up" delay={550} as="p" className="text-sm md:text-base text-[#8A7A60] max-w-lg text-center leading-relaxed px-5 mb-8">
-        AyahLens meets you exactly where you are — through your mood, your life situation, or even what your camera sees — and guides you with personalised Quran verses &amp; Hadiths.
+      <Reveal variant="right" delay={450} style={{ marginBottom: 8 }}>
+        <p style={{
+          fontFamily: "'Instrument Serif', serif",
+          fontSize: 'clamp(1.1rem, 2vw, 1.4rem)',
+          color: `${T.forest}99`, fontStyle: 'italic',
+        }}>Point, read, grow.</p>
       </Reveal>
 
-      <Reveal variant="blur" delay={700} className="flex items-center gap-2 bg-[#0B3D20] text-[#E8C060] text-xs font-heading font-semibold px-5 py-2 rounded-full mb-12 animate-badge-pop" style={{ boxShadow: '0 6px 20px rgba(11,61,32,.28)' }}>
-        <span>5 Core Features</span><span className="w-1 h-1 rounded-full bg-[#E8C060]/40"></span>
-        <span>Demo-ready</span><span className="w-1 h-1 rounded-full bg-[#E8C060]/40"></span>
-        <span>Scroll to explore ↓</span>
+      <Reveal variant="up" delay={550} style={{ marginBottom: 32 }}>
+        <p style={{ fontSize: '.9rem', color: T.inkSoft, maxWidth: 500, textAlign: 'center', lineHeight: 1.7, padding: '0 20px' }}>
+          AyahLens meets you exactly where you are — through your mood, your life situation, or even what your camera sees — and guides you with personalised Quran verses &amp; Hadiths.
+        </p>
       </Reveal>
 
-      <div className="flex items-end justify-center gap-4 md:gap-8 relative">
-        <Reveal variant="left" delay={800} className="hidden md:block">
-          <div className="phone w-44 animate-float-delay shrink-0" style={{ height: '310px' }}>
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-4 bg-black rounded-b-2xl z-10"></div>
-            <div className="h-full flex flex-col p-3.5 pt-7">
-              <p className="text-[.52rem] text-[#E8C060]/60 uppercase tracking-widest mb-1.5 font-heading">Feature 1 · Mood</p>
-              <p className="text-[#F6E8C0] text-[.65rem] font-medium mb-2">How are you feeling?</p>
-              <ChipGroup chips={['Anxious 😰', 'Grateful', 'Lost', 'Joyful']} className="mb-2.5" />
-              <div className="vcard p-2.5 flex-1">
-                <p className="font-arabic text-[#E8C060] text-[.9rem] leading-loose text-right mb-1" style={{ direction: 'rtl' }}>أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ</p>
-                <p className="text-[#F6E8C0]/70 text-[.56rem] italic leading-snug">"In the remembrance of Allah hearts find rest."</p>
-                <p className="text-[#C8921A] text-[.52rem] font-semibold mt-1 font-heading tracking-wider">Ar-Ra'd 13:28</p>
+      <Reveal variant="blur" delay={700} style={{ marginBottom: 48 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: T.forest, color: T.goldLight,
+          fontSize: '.72rem', fontFamily: "'Syne', sans-serif", fontWeight: 700,
+          padding: '8px 20px', borderRadius: 100,
+          boxShadow: '0 6px 20px rgba(11,61,32,.28)',
+        }}>
+          <span>5 Core Features</span>
+          <span style={{ width: 4, height: 4, borderRadius: '50%', background: `${T.goldLight}66` }} />
+          <span>Demo-ready</span>
+          <span style={{ width: 4, height: 4, borderRadius: '50%', background: `${T.goldLight}66` }} />
+          <span>Scroll to explore ↓</span>
+        </div>
+      </Reveal>
+
+      {/* Three phones */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 24 }}>
+
+        {/* Left phone — hidden on small, shown on large via inline (just always show here) */}
+        <Reveal variant="left" delay={800}>
+          <div style={{ ...phone, width: 176, height: 310, animation: 'float 3.5s ease-in-out infinite 1.2s' }}>
+            <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 64, height: 16, background: '#000', borderRadius: '0 0 16px 16px', zIndex: 10 }} />
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '28px 14px 14px' }}>
+              <p style={{ fontSize: '.52rem', color: `${T.goldLight}99`, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6, fontFamily: "'Syne', sans-serif" }}>Feature 1 · Mood</p>
+              <p style={{ color: T.goldPale, fontSize: '.65rem', fontWeight: 500, marginBottom: 8 }}>How are you feeling?</p>
+              <ChipGroup chips={['Anxious 😰', 'Grateful', 'Lost', 'Joyful']} />
+              <div style={{ ...vcard, padding: 10, marginTop: 10, flex: 1 }}>
+                <p style={{ fontFamily: "'Amiri', serif", color: T.goldLight, fontSize: '.9rem', lineHeight: 2, textAlign: 'right', direction: 'rtl', marginBottom: 4 }}>أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ</p>
+                <p style={{ color: `${T.goldPale}bb`, fontSize: '.56rem', fontStyle: 'italic', lineHeight: 1.5 }}>"In the remembrance of Allah hearts find rest."</p>
+                <p style={{ color: T.gold, fontSize: '.52rem', fontWeight: 700, marginTop: 4, fontFamily: "'Syne', sans-serif", letterSpacing: '.05em' }}>Ar-Ra'd 13:28</p>
               </div>
             </div>
           </div>
         </Reveal>
 
-        <Reveal variant="zoom" delay={950} className="z-10">
-          <div className="phone w-60 md:w-68 shrink-0 animate-float" style={{ height: '490px', width: '252px' }}>
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-3xl z-10"></div>
-            <div className="h-full flex flex-col">
-              <div className="relative flex-1 bg-fixed" style={{ background: 'linear-gradient(180deg,#060f08,#0B3D20 80%)' }}>
-                <div className="absolute top-7 left-7 w-8 h-8 border-t-2 border-l-2 border-[#C8921A]/60 rounded-tl-xl"></div>
-                <div className="absolute top-7 right-7 w-8 h-8 border-t-2 border-r-2 border-[#C8921A]/60 rounded-tr-xl"></div>
-                <div className="absolute bottom-5 left-7 w-8 h-8 border-b-2 border-l-2 border-[#C8921A]/60 rounded-bl-xl"></div>
-                <div className="absolute bottom-5 right-7 w-8 h-8 border-b-2 border-r-2 border-[#C8921A]/60 rounded-br-xl"></div>
-                <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                  <svg viewBox="0 0 120 160" className="w-28 h-36" fill="#1B6B3C">
-                    <ellipse cx="60" cy="55" rx="36" ry="42" /><ellipse cx="42" cy="75" rx="28" ry="33" /><ellipse cx="78" cy="70" rx="30" ry="36" /><rect x="54" y="112" width="12" height="48" />
-                  </svg>
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="relative w-20 h-20">
-                    <div className="ring animate-pulse-ring"></div>
-                    <div className="ring animate-pulse-ring2"></div>
-                    <div className="ring animate-pulse-ring3"></div>
-                    <div className="w-full h-full rounded-full border-2 border-[#C8921A]/70 bg-[#C8921A]/10 flex items-center justify-center">
-                      <div className="w-3.5 h-3.5 rounded-full bg-[#C8921A] animate-blink"></div>
-                    </div>
+        {/* Center phone */}
+        <Reveal variant="zoom" delay={950} style={{ zIndex: 10 }}>
+          <div style={{ ...phone, width: 252, height: 490, animation: 'float 3.5s ease-in-out infinite' }}>
+            <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 80, height: 20, background: '#000', borderRadius: '0 0 24px 24px', zIndex: 10 }} />
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, position: 'relative', background: 'linear-gradient(180deg,#060f08,#0B3D20 80%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {/* Corner brackets */}
+                {[
+                  { top: 28, left: 28,  borderTop: `2px solid rgba(200,146,26,.6)`, borderLeft: `2px solid rgba(200,146,26,.6)`,  borderRadius: '14px 0 0 0' },
+                  { top: 28, right: 28, borderTop: `2px solid rgba(200,146,26,.6)`, borderRight: `2px solid rgba(200,146,26,.6)`, borderRadius: '0 14px 0 0' },
+                  { bottom: 20, left: 28,  borderBottom: `2px solid rgba(200,146,26,.6)`, borderLeft: `2px solid rgba(200,146,26,.6)`,  borderRadius: '0 0 0 14px' },
+                  { bottom: 20, right: 28, borderBottom: `2px solid rgba(200,146,26,.6)`, borderRight: `2px solid rgba(200,146,26,.6)`, borderRadius: '0 0 14px 0' },
+                ].map((st, i) => (
+                  <div key={i} style={{ position: 'absolute', width: 32, height: 32, ...st }} />
+                ))}
+
+                {/* Pulse rings */}
+                <div style={{ position: 'relative', width: 80, height: 80 }}>
+                  {[0, .65, 1.3].map((d, i) => (
+                    <div key={i} style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `1.5px solid rgba(200,146,26,.55)`, animation: `pulseRing 2s ease-out ${d}s infinite` }} />
+                  ))}
+                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: `2px solid rgba(200,146,26,.7)`, background: 'rgba(200,146,26,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: T.gold, animation: 'blink 2s ease-in-out infinite' }} />
                   </div>
                 </div>
-                <div className="absolute top-18 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#0B3D20]/80 backdrop-blur-sm text-[#C8921A] text-[.62rem] font-heading font-bold px-3 py-1 rounded-full tracking-widest border border-[#C8921A]/40">
+
+                <div style={{ position: 'absolute', top: 32, left: '50%', transform: 'translateX(-50%)', fontSize: '.5rem', color: `${T.goldLight}66`, fontFamily: "'Syne', sans-serif", letterSpacing: '.1em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                  Feature 3 · AyahLens Camera
+                </div>
+                <div style={{ position: 'absolute', top: '4.8rem', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', background: 'rgba(11,61,32,.8)', backdropFilter: 'blur(8px)', color: T.gold, fontSize: '.6rem', fontFamily: "'Syne', sans-serif", fontWeight: 700, padding: '4px 12px', borderRadius: 100, letterSpacing: '.08em', border: `1px solid rgba(200,146,26,.4)` }}>
                   🌳 TREE — 94% match
                 </div>
-                <div className="absolute top-8 left-1/2 -translate-x-1/2 text-[.5rem] text-[#E8C060]/40 font-heading tracking-widest uppercase">Feature 3 · AyahLens Camera</div>
               </div>
-              <div className="bg-[#0B3D20] p-4 border-t border-[#C8921A]/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-0.5 h-7 bg-[#C8921A] rounded-full"></div>
+
+              <div style={{ background: T.forest, padding: 16, borderTop: `1px solid rgba(200,146,26,.2)` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 2, height: 28, background: T.gold, borderRadius: 2 }} />
                   <div>
-                    <p className="text-[#C8921A] text-[.5rem] font-heading font-bold tracking-widest uppercase">AyahLens Found</p>
-                    <p className="text-[#F6E8C0]/50 text-[.48rem]">Ibrahim 14:24</p>
+                    <p style={{ color: T.gold, fontSize: '.5rem', fontFamily: "'Syne', sans-serif", fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase' }}>AyahLens Found</p>
+                    <p style={{ color: `${T.goldPale}88`, fontSize: '.48rem' }}>Ibrahim 14:24</p>
                   </div>
                 </div>
-                <p className="font-arabic text-[#E8C060] leading-loose text-right mb-1.5" style={{ direction: 'rtl', fontSize: '1.05rem' }}>أَلَمْ تَرَ كَيْفَ ضَرَبَ ٱللَّهُ مَثَلًا كَشَجَرَةٍ طَيِّبَةٍ</p>
-                <p className="text-[#F6E8C0]/70 text-[.58rem] italic leading-relaxed">"A good word is like a good tree — roots firm, branches in the sky."</p>
-                <div className="flex gap-2 mt-2.5">
-                  <button className="flex-1 bg-[#C8921A]/20 border border-[#C8921A]/30 text-[#E8C060] text-[.58rem] py-1.5 rounded-xl font-heading font-semibold">Save ✦</button>
-                  <button className="flex-1 bg-[#2E9E5A]/20 border border-[#2E9E5A]/30 text-[#F6E8C0]/80 text-[.58rem] py-1.5 rounded-xl">Share</button>
+                <p style={{ fontFamily: "'Amiri', serif", color: T.goldLight, lineHeight: 2, textAlign: 'right', direction: 'rtl', marginBottom: 6, fontSize: '1.05rem' }}>أَلَمْ تَرَ كَيْفَ ضَرَبَ ٱللَّهُ مَثَلًا كَشَجَرَةٍ طَيِّبَةٍ</p>
+                <p style={{ color: `${T.goldPale}bb`, fontSize: '.58rem', fontStyle: 'italic', lineHeight: 1.5 }}>"A good word is like a good tree — roots firm, branches in the sky."</p>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button style={{ flex: 1, background: 'rgba(200,146,26,.2)', border: `1px solid rgba(200,146,26,.3)`, color: T.goldLight, fontSize: '.58rem', padding: '6px 0', borderRadius: 14, fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>Save ✦</button>
+                  <button style={{ flex: 1, background: 'rgba(46,158,90,.2)', border: `1px solid rgba(46,158,90,.3)`, color: `${T.goldPale}cc`, fontSize: '.58rem', padding: '6px 0', borderRadius: 14 }}>Share</button>
                 </div>
               </div>
             </div>
           </div>
         </Reveal>
 
-        <Reveal variant="right" delay={1100} className="hidden md:block">
-          <div className="phone w-44 animate-float shrink-0" style={{ height: '310px', animationDelay: '.7s' }}>
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-4 bg-black rounded-b-2xl z-10"></div>
-            <div className="h-full flex flex-col p-3.5 pt-7">
-              <p className="text-[.52rem] text-[#E8C060]/60 uppercase tracking-widest mb-1.5 font-heading">Feature 2 · Journey</p>
-              <div className="vcard p-2.5 mb-2.5 flex-1">
-                <p className="font-arabic text-[#E8C060] text-[.95rem] leading-loose text-right mb-1" style={{ direction: 'rtl' }}>وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥ</p>
-                <p className="text-[#F6E8C0]/70 text-[.58rem] italic leading-snug">"Whoever relies on Allah — He is sufficient for him."</p>
-                <p className="text-[#C8921A] text-[.52rem] mt-1 font-heading font-semibold tracking-wider">At-Talaq 65:3</p>
+        {/* Right phone */}
+        <Reveal variant="right" delay={1100}>
+          <div style={{ ...phone, width: 176, height: 310, animation: 'float 3.5s ease-in-out infinite .7s' }}>
+            <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 64, height: 16, background: '#000', borderRadius: '0 0 16px 16px', zIndex: 10 }} />
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '28px 14px 14px' }}>
+              <p style={{ fontSize: '.52rem', color: `${T.goldLight}99`, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6, fontFamily: "'Syne', sans-serif" }}>Feature 2 · Journey</p>
+              <div style={{ ...vcard, padding: 10, marginBottom: 10, flex: 1 }}>
+                <p style={{ fontFamily: "'Amiri', serif", color: T.goldLight, fontSize: '.95rem', lineHeight: 2, textAlign: 'right', direction: 'rtl', marginBottom: 4 }}>وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥ</p>
+                <p style={{ color: `${T.goldPale}bb`, fontSize: '.58rem', fontStyle: 'italic', lineHeight: 1.4 }}>"Whoever relies on Allah — He is sufficient for him."</p>
+                <p style={{ color: T.gold, fontSize: '.52rem', marginTop: 4, fontFamily: "'Syne', sans-serif", fontWeight: 700, letterSpacing: '.05em' }}>At-Talaq 65:3</p>
               </div>
-              <div className="flex items-center gap-1.5 bg-[#2E9E5A]/20 rounded-xl px-2.5 py-1.5 mb-2">
-                <div className="w-5 h-5 rounded-full bg-[#C8921A] flex items-center justify-center">
-                  <svg className="w-2.5 h-2.5" fill="#0B3D20" viewBox="0 0 10 10"><polygon points="3,1 9,5 3,9" /></svg>
-                </div>
-                <div className="flex-1 h-1 bg-[#2E9E5A]/30 rounded-full"><div className="w-2/5 h-full bg-[#C8921A] rounded-full"></div></div>
-                <span className="text-[.5rem] text-[#F6E8C0]/50">2:14</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.5rem', marginBottom: 4 }}>
+                <span style={{ color: `${T.goldPale}88` }}>🔥 7-day streak</span>
+                <span style={{ color: T.gold }}>65%</span>
               </div>
-              <div>
-                <div className="flex justify-between text-[.5rem] mb-0.5"><span className="text-[#F6E8C0]/50">🔥 7-day streak</span><span className="text-[#C8921A]">65%</span></div>
-                <div className="h-1 bg-[#2E9E5A]/30 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg,#2E9E5A,#C8921A)', width: '65%' }}></div>
-                </div>
+              <div style={{ height: 4, background: 'rgba(46,158,90,.3)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: '65%', background: `linear-gradient(90deg,${T.forestLight},${T.gold})`, borderRadius: 2 }} />
               </div>
             </div>
           </div>
         </Reveal>
+
       </div>
     </section>
   );
 }
 
+// ── Feature Strip ─────────────────────────────────────────────────────────────
 function FeatureStrip() {
+  const items = [
+    { label: 'Mood Entry',          n: 1, active: false },
+    { label: 'Reading Journey',     n: 2, active: false },
+    { label: 'AyahLens Camera ✨',  n: 3, active: true  },
+    { label: 'Community',           n: 4, active: false },
+    { label: 'Onboarding',          n: 5, active: false },
+  ];
   return (
-    <div className="snap-start bg-[#0B3D20] py-4 px-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
-      <a href="#feat1" className="text-[#E8C060]/70 text-xs font-heading font-semibold hover:text-[#C8921A] transition-colors tracking-wide flex items-center gap-1.5">
-        <span className="w-5 h-5 rounded-full bg-[#C8921A]/20 border border-[#C8921A]/30 flex items-center justify-center text-[.55rem] text-[#C8921A] font-bold">1</span>Mood Entry
-      </a>
-      <a href="#feat2" className="text-[#E8C060]/70 text-xs font-heading font-semibold hover:text-[#C8921A] transition-colors tracking-wide flex items-center gap-1.5">
-        <span className="w-5 h-5 rounded-full bg-[#C8921A]/20 border border-[#C8921A]/30 flex items-center justify-center text-[.55rem] text-[#C8921A] font-bold">2</span>Reading Journey
-      </a>
-      <a href="#feat3" className="text-[#C8921A] text-xs font-heading font-bold tracking-wide flex items-center gap-1.5">
-        <span className="w-5 h-5 rounded-full bg-[#C8921A] flex items-center justify-center text-[.55rem] text-[#0B3D20] font-bold">3</span>AyahLens Camera ✨
-      </a>
-      <a href="#feat4" className="text-[#E8C060]/70 text-xs font-heading font-semibold hover:text-[#C8921A] transition-colors tracking-wide flex items-center gap-1.5">
-        <span className="w-5 h-5 rounded-full bg-[#C8921A]/20 border border-[#C8921A]/30 flex items-center justify-center text-[.55rem] text-[#C8921A] font-bold">4</span>Community
-      </a>
-      <a href="#feat5" className="text-[#E8C060]/70 text-xs font-heading font-semibold hover:text-[#C8921A] transition-colors tracking-wide flex items-center gap-1.5">
-        <span className="w-5 h-5 rounded-full bg-[#C8921A]/20 border border-[#C8921A]/30 flex items-center justify-center text-[.55rem] text-[#C8921A] font-bold">5</span>Onboarding
-      </a>
+    <div style={{ background: T.forest, padding: '14px 24px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '8px 32px' }}>
+      {items.map(({ label, n, active }) => (
+        <a key={n} href={`#feat${n}`} style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          color: active ? T.gold : `${T.goldLight}bb`,
+          fontSize: '.72rem', fontFamily: "'Syne', sans-serif",
+          fontWeight: active ? 800 : 600, textDecoration: 'none',
+          letterSpacing: '.04em', transition: 'color .2s',
+        }}>
+          <span style={{
+            width: 20, height: 20, borderRadius: '50%',
+            background: active ? T.gold : 'rgba(200,146,26,.2)',
+            border: active ? 'none' : `1px solid rgba(200,146,26,.3)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '.55rem', color: active ? T.forest : T.gold, fontWeight: 800,
+          }}>{n}</span>
+          {label}
+        </a>
+      ))}
     </div>
   );
 }
 
+// ── Feature 1 — Mood ──────────────────────────────────────────────────────────
 function FeatureMood() {
   return (
-    <section id="feat1" className="snap-start py-20 md:py-28 relative overflow-hidden" style={{ background: '#FAF6EE' }}>
-      <div className="star-tile absolute inset-0 opacity-60 pointer-events-none"></div>
-      <div className="max-w-6xl mx-auto px-6 relative z-10">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <Reveal variant="left">
-            <div className="flex items-center gap-3 mb-5">
-              <span className="w-9 h-9 rounded-full bg-[#0B3D20] text-[#E8C060] font-heading font-extrabold text-sm flex items-center justify-center shrink-0">1</span>
-              <span className="tag">Feature 1 of 5</span>
-              <div className="bar"></div>
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl text-[#0B3D20] font-normal leading-tight mb-4">
-              Mood &amp;<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Situation Entry</em>
-            </h2>
-            <p className="text-[#8A7A60] leading-relaxed mb-6 text-sm md:text-base">
-              Tell AyahLens how you're feeling — tap a quick mood chip or write freely in plain text. "I just had a fight with my spouse." "My exam is tomorrow and I'm terrified." Even voice input is supported. In seconds, you receive a matched Ayah + Hadith with a clear, short explanation.
-            </p>
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>20 pre-built mood chips + free-text box</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Voice input via Flutter speech_to_text</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>AI / rule-based matcher → 1-2 Ayahs + 1 Hadith instantly</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Short plain-language explanation for every result</li>
-            </ul>
-            <div className="flex flex-wrap gap-2">
-              <span className="tag">Anxious</span><span className="tag">Grateful</span><span className="tag">Lost</span>
-              <span className="tag">Stressed</span><span className="tag">Joyful</span><span className="tag-gold tag">+ 13 more</span>
-            </div>
-          </Reveal>
-
-          <Reveal variant="zoom" delay={200} className="flex justify-center">
-            <div className="phone w-64 relative" style={{ height: '510px' }}>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-3xl z-10"></div>
-              <div className="h-full flex flex-col p-5 pt-9">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-full bg-[#C8921A] flex items-center justify-center">
-                    <span className="text-[.55rem] font-heading font-extrabold text-[#0B3D20]">1</span>
-                  </div>
-                  <span className="text-[.58rem] text-[#E8C060]/60 uppercase font-heading tracking-widest">Mood Entry</span>
-                </div>
-                <p className="text-[#F6E8C0] text-sm font-medium mb-3">How are you feeling today?</p>
-                <ChipGroup chips={['Anxious 😰', 'Grateful 🌿', 'Lost 🌊', 'Joyful ☀️', 'Seeking 🤲', 'Stressed']} className="mb-4" />
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="flex-1 h-px bg-[#2E9E5A]/30"></div>
-                  <span className="text-[.58rem] text-[#F6E8C0]/50">or type freely</span>
-                  <div className="flex-1 h-px bg-[#2E9E5A]/30"></div>
-                </div>
-                <div className="bg-[#2E9E5A]/10 border border-[#2E9E5A]/20 rounded-xl px-3 py-2 mb-4 flex items-center gap-2">
-                  <p className="text-[#F6E8C0]/60 text-[.65rem] flex-1 italic">"I just fought with my spouse…"</p>
-                  <svg className="w-4 h-4 text-[#C8921A]/50" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1.5"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9l3-3 3 3M10 6v8" /></svg>
-                </div>
-                <div className="vcard p-3.5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <div className="w-1 h-5 bg-[#C8921A] rounded-full"></div>
-                      <span className="text-[.55rem] text-[#C8921A] font-heading font-bold uppercase tracking-widest">Matched Ayah</span>
-                    </div>
-                    <p className="font-arabic text-[#E8C060] leading-loose text-right mb-2" style={{ direction: 'rtl', fontSize: '1.05rem' }}>أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ</p>
-                    <p className="text-[#F6E8C0]/70 text-[.6rem] italic leading-relaxed">"Verily, in the remembrance of Allah hearts find rest."</p>
-                    <p className="text-[#C8921A] text-[.55rem] font-heading font-semibold mt-1.5 tracking-wider">Ar-Ra'd 13:28</p>
-                  </div>
-                  <div className="mt-3 bg-[#2E9E5A]/10 rounded-lg p-2">
-                    <p className="text-[.55rem] text-[#E8C060]/60 font-heading uppercase tracking-wider mb-1">Hadith Match</p>
-                    <p className="text-[#F6E8C0]/60 text-[.58rem] italic leading-relaxed">"The Prophet ﷺ said: 'Recite the Quran, for it will come as an intercessor…'" — Muslim</p>
-                  </div>
-                </div>
+    <Section id="feat1" bg={T.cream}>
+      <div style={{ ...starTileBg, position: 'absolute', inset: 0, opacity: .6, pointerEvents: 'none' }} />
+      <Container>
+        <TwoCol
+          left={
+            <Reveal variant="left">
+              <FeatureLabel n="1" label="Feature 1 of 5" />
+              <FeatureTitle line1="Mood &" em="Situation Entry" />
+              <p style={{ color: T.inkSoft, lineHeight: 1.7, marginBottom: 20, fontSize: '.9rem' }}>
+                Tell AyahLens how you're feeling — tap a quick mood chip or write freely in plain text. In seconds, you receive a matched Ayah + Hadith with a clear, short explanation.
+              </p>
+              <BulletList items={[
+                '20 pre-built mood chips + free-text box',
+                'Voice input via Flutter speech_to_text',
+                'AI / rule-based matcher → 1-2 Ayahs + 1 Hadith instantly',
+                'Short plain-language explanation for every result',
+              ]} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {['Anxious', 'Grateful', 'Lost', 'Stressed', 'Joyful'].map(c => (
+                  <span key={c} style={tag()}>{c}</span>
+                ))}
+                <span style={tag(true)}>+ 13 more</span>
               </div>
-            </div>
-          </Reveal>
-        </div>
-      </div>
-    </section>
+            </Reveal>
+          }
+          right={
+            <Reveal variant="zoom" delay={200}>
+              <PhoneShell height={510}>
+                <p style={{ color: T.goldPale, fontSize: '.875rem', fontWeight: 500, marginBottom: 12 }}>How are you feeling today?</p>
+                <ChipGroup chips={['Anxious 😰', 'Grateful 🌿', 'Lost 🌊', 'Joyful ☀️', 'Seeking 🤲', 'Stressed']} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(46,158,90,.3)' }} />
+                  <span style={{ fontSize: '.58rem', color: `${T.goldPale}88` }}>or type freely</span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(46,158,90,.3)' }} />
+                </div>
+                <div style={{ background: 'rgba(46,158,90,.1)', border: '1px solid rgba(46,158,90,.2)', borderRadius: 12, padding: '8px 12px', marginBottom: 12 }}>
+                  <p style={{ color: `${T.goldPale}99`, fontSize: '.65rem', fontStyle: 'italic' }}>"I just fought with my spouse…"</p>
+                </div>
+                <div style={{ ...vcard, padding: 14, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <div style={{ width: 2, height: 20, background: T.gold, borderRadius: 2 }} />
+                      <span style={{ fontSize: '.55rem', color: T.gold, fontFamily: "'Syne', sans-serif", fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase' }}>Matched Ayah</span>
+                    </div>
+                    <p style={{ fontFamily: "'Amiri', serif", color: T.goldLight, lineHeight: 2, textAlign: 'right', direction: 'rtl', marginBottom: 8, fontSize: '1.05rem' }}>أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ</p>
+                    <p style={{ color: `${T.goldPale}bb`, fontSize: '.6rem', fontStyle: 'italic', lineHeight: 1.5 }}>"Verily, in the remembrance of Allah hearts find rest."</p>
+                    <p style={{ color: T.gold, fontSize: '.55rem', fontFamily: "'Syne', sans-serif", fontWeight: 700, marginTop: 6, letterSpacing: '.06em' }}>Ar-Ra'd 13:28</p>
+                  </div>
+                  <div style={{ marginTop: 10, background: 'rgba(46,158,90,.1)', borderRadius: 10, padding: 8 }}>
+                    <p style={{ fontSize: '.55rem', color: `${T.goldLight}99`, fontFamily: "'Syne', sans-serif", textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 4 }}>Hadith Match</p>
+                    <p style={{ color: `${T.goldPale}99`, fontSize: '.58rem', fontStyle: 'italic', lineHeight: 1.5 }}>"The Prophet ﷺ said: 'Recite the Quran, for it will come as an intercessor…'" — Muslim</p>
+                  </div>
+                </div>
+              </PhoneShell>
+            </Reveal>
+          }
+        />
+      </Container>
+    </Section>
   );
 }
 
+// ── Feature 2 — Journey ───────────────────────────────────────────────────────
 function FeatureJourney() {
   return (
-    <section id="feat2" className="snap-start py-20 md:py-28 relative overflow-hidden" style={{ background: '#F0E6D0' }}>
-      <div className="absolute inset-0 pointer-events-none bg-fixed" style={{ background: 'url("data:image/svg+xml,%3Csvg width=\'80\' height=\'80\' viewBox=\'0 0 80 80\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' stroke=\'%23C8921A\' stroke-width=\'.4\' opacity=\'.07\'%3E%3Ccircle cx=\'40\' cy=\'40\' r=\'32\'/%3E%3Ccircle cx=\'40\' cy=\'40\' r=\'20\'/%3E%3Cline x1=\'8\' y1=\'40\' x2=\'72\' y2=\'40\'/%3E%3Cline x1=\'40\' y1=\'8\' x2=\'40\' y2=\'72\'/%3E%3Cline x1=\'17\' y1=\'17\' x2=\'63\' y2=\'63\'/%3E%3Cline x1=\'63\' y1=\'17\' x2=\'17\' y2=\'63\'/%3E%3C/g%3E%3C/svg%3E") center/80px' }}></div>
-
-      <div className="max-w-6xl mx-auto px-6 relative z-10">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <Reveal variant="zoom" className="flex justify-center order-2 md:order-1">
-            <div className="phone w-64 relative" style={{ height: '520px' }}>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-3xl z-10"></div>
-              <div className="h-full flex flex-col p-5 pt-9">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-full bg-[#C8921A] flex items-center justify-center"><span className="text-[.55rem] font-heading font-extrabold text-[#0B3D20]">2</span></div>
-                  <span className="text-[.58rem] text-[#E8C060]/60 uppercase font-heading tracking-widest">Reading Journey</span>
-                </div>
-                <div className="text-center mb-3 border-b border-[#2E9E5A]/20 pb-3">
-                  <p className="font-arabic text-[#E8C060] text-xs" style={{ direction: 'rtl' }}>سورة التلاق</p>
-                  <p className="text-[#F6E8C0]/60 text-[.55rem] font-heading tracking-widest uppercase">Surah At-Talaq · Ayah 3</p>
-                </div>
-                <div className="text-center mb-3">
-                  <p className="font-arabic text-[#E8C060] leading-loose" style={{ direction: 'rtl', fontSize: '1.25rem', lineHeight: 2.2 }}>وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥ ۚ إِنَّ ٱللَّهَ بَٰلِغُ أَمْرِهِۦ</p>
-                </div>
-                <div className="bg-[#2E9E5A]/10 rounded-xl p-2.5 mb-2.5">
-                  <p className="text-[#F6E8C0]/80 text-[.62rem] italic leading-relaxed">"And whoever relies upon Allah — then He is sufficient for him. Indeed, Allah will accomplish His purpose."</p>
-                </div>
-                <div className="bg-[#C8921A]/10 border border-[#C8921A]/20 rounded-xl p-2.5 mb-3">
-                  <p className="text-[.52rem] text-[#C8921A] font-heading uppercase tracking-wider mb-1">Simple Tafsir</p>
-                  <p className="text-[#F6E8C0]/70 text-[.58rem] leading-relaxed">Complete trust in Allah means surrendering worry about outcomes. This verse was revealed as comfort to those facing hardship.</p>
-                </div>
-                <div className="flex items-center gap-2 bg-[#2E9E5A]/10 rounded-xl px-3 py-2 mb-3">
-                  <button className="w-7 h-7 rounded-full bg-[#C8921A] flex items-center justify-center shrink-0">
-                    <svg className="w-3 h-3" fill="#0B3D20" viewBox="0 0 10 10"><polygon points="3,1 9,5 3,9" /></svg>
-                  </button>
-                  <div className="flex-1"><div className="h-1 bg-[#2E9E5A]/30 rounded-full mb-0.5"><div className="w-2/5 h-full bg-[#C8921A] rounded-full"></div></div></div>
-                  <span className="text-[.5rem] text-[#F6E8C0]/60 shrink-0">Al-Husary</span>
-                </div>
-                <div className="flex gap-2 mt-auto">
-                  <button className="flex-1 bg-[#2E9E5A]/25 border border-[#2E9E5A]/30 text-[.6rem] text-[#F6E8C0]/80 py-2 rounded-xl font-heading">Add Reflection ✍</button>
-                  <button className="flex-1 bg-[#C8921A] text-[#0B3D20] text-[.6rem] font-heading font-bold py-2 rounded-xl">Next Verse →</button>
+    <Section id="feat2" bg={T.parchment}>
+      <Container>
+        <TwoCol
+          reverse
+          left={
+            <Reveal variant="right" delay={200}>
+              <FeatureLabel n="2" label="Feature 2 of 5" />
+              <FeatureTitle line1="Personalised" em="Reading Journey" />
+              <p style={{ color: T.inkSoft, lineHeight: 1.7, marginBottom: 20, fontSize: '.9rem' }}>
+                A beautiful full-screen reader that remembers you. Arabic text, translation, simple tafsir, and audio recitation — all in one screen.
+              </p>
+              <BulletList items={[
+                'Full Arabic + translation + Tafsir in one view',
+                'Audio via alquran.cloud API (multiple reciters)',
+                '"Mark as Read" + personal reflection journal',
+                'Smart next-verse suggestion based on mood history',
+                '🔥 Streak counter + gentle daily reminder',
+              ]} />
+              <div style={{ ...featCard, padding: 16, maxWidth: 300, display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ fontSize: '2rem' }}>🔥</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '.75rem', fontFamily: "'Syne', sans-serif", fontWeight: 700, color: T.forest, marginBottom: 6 }}>7-Day Streak — Keep Going!</p>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[100, 100, 100, 100, 0, 0, 0].map((w, i) => (
+                      <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(11,61,32,.1)', overflow: 'hidden' }}>
+                        {w > 0 && <div style={{ height: '100%', width: `${w}%`, background: i === 3 ? T.gold : T.forestMid, borderRadius: 3 }} />}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Reveal>
-
-          <Reveal variant="right" delay={200} className="order-1 md:order-2">
-            <div className="flex items-center gap-3 mb-5">
-              <span className="w-9 h-9 rounded-full bg-[#0B3D20] text-[#E8C060] font-heading font-extrabold text-sm flex items-center justify-center shrink-0">2</span>
-              <span className="tag">Feature 2 of 5</span>
-              <div className="bar"></div>
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl text-[#0B3D20] font-normal leading-tight mb-4">
-              Personalised<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Reading Journey</em>
-            </h2>
-            <p className="text-ink-soft leading-relaxed mb-6 text-sm md:text-base">
-              A beautiful full-screen reader that remembers you. Arabic text, translation, simple tafsir, and audio recitation — all in one screen. After each verse, the app suggests your next one based on your mood history and what you've already read.
-            </p>
-            <ul className="space-y-3 mb-6">
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Full Arabic + translation + Tafsir in one view</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Audio via alquran.cloud API (multiple reciters)</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>"Mark as Read" + personal reflection journal</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Smart next-verse suggestion (state machine + mood history)</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>🔥 Streak counter + gentle daily reminder</li>
-            </ul>
-            <div className="feat-card p-4 flex items-center gap-4 max-w-xs">
-              <div className="text-3xl">🔥</div>
-              <div className="flex-1">
-                <p className="text-xs font-heading font-bold text-[#0B3D20] mb-1">7-Day Streak — Keep Going!</p>
-                <div className="flex gap-1">
-                  <div className="flex-1 h-1.5 rounded-full bg-[#0B3D20]/20 overflow-hidden"><div className="h-full bg-[#1B6B3C] rounded-full" style={{ width: '100%' }}></div></div>
-                  <div className="flex-1 h-1.5 rounded-full bg-[#0B3D20]/20 overflow-hidden"><div className="h-full bg-[#1B6B3C] rounded-full" style={{ width: '100%' }}></div></div>
-                  <div className="flex-1 h-1.5 rounded-full bg-[#0B3D20]/20 overflow-hidden"><div className="h-full bg-[#1B6B3C] rounded-full" style={{ width: '100%' }}></div></div>
-                  <div className="flex-1 h-1.5 rounded-full bg-[#0B3D20]/20 overflow-hidden"><div className="h-full bg-[#C8921A] rounded-full" style={{ width: '100%' }}></div></div>
-                  <div className="flex-1 h-1.5 rounded-full bg-[#0B3D20]/10"></div>
-                  <div className="flex-1 h-1.5 rounded-full bg-[#0B3D20]/10"></div>
-                  <div className="flex-1 h-1.5 rounded-full bg-[#0B3D20]/10"></div>
+            </Reveal>
+          }
+          right={
+            <Reveal variant="zoom">
+              <PhoneShell height={520}>
+                <div style={{ textAlign: 'center', marginBottom: 12, borderBottom: '1px solid rgba(46,158,90,.2)', paddingBottom: 12 }}>
+                  <p style={{ fontFamily: "'Amiri', serif", color: T.goldLight, fontSize: '.75rem', direction: 'rtl' }}>سورة التلاق</p>
+                  <p style={{ color: `${T.goldPale}99`, fontSize: '.55rem', fontFamily: "'Syne', sans-serif", letterSpacing: '.1em', textTransform: 'uppercase' }}>Surah At-Talaq · Ayah 3</p>
                 </div>
-                <p className="text-[.6rem] text-[#8A7A60] mt-1">Mon · Tue · Wed · Thu · Fri · Sat · Sun</p>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </div>
-    </section>
+                <p style={{ fontFamily: "'Amiri', serif", color: T.goldLight, fontSize: '1.25rem', lineHeight: 2.2, textAlign: 'right', direction: 'rtl', marginBottom: 10 }}>وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥ</p>
+                <div style={{ background: 'rgba(46,158,90,.1)', borderRadius: 14, padding: 10, marginBottom: 10 }}>
+                  <p style={{ color: `${T.goldPale}cc`, fontSize: '.62rem', fontStyle: 'italic', lineHeight: 1.6 }}>"And whoever relies upon Allah — then He is sufficient for him."</p>
+                </div>
+                <div style={{ background: `rgba(200,146,26,.1)`, border: `1px solid rgba(200,146,26,.2)`, borderRadius: 14, padding: 10, marginBottom: 10 }}>
+                  <p style={{ fontSize: '.52rem', color: T.gold, fontFamily: "'Syne', sans-serif", textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 4 }}>Simple Tafsir</p>
+                  <p style={{ color: `${T.goldPale}cc`, fontSize: '.58rem', lineHeight: 1.5 }}>Complete trust in Allah means surrendering worry about outcomes.</p>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+                  <button style={{ flex: 1, background: 'rgba(46,158,90,.25)', border: '1px solid rgba(46,158,90,.3)', color: `${T.goldPale}cc`, fontSize: '.6rem', padding: '8px 0', borderRadius: 14, fontFamily: "'Syne', sans-serif" }}>Add Reflection ✍</button>
+                  <button style={{ flex: 1, background: T.gold, color: T.forest, fontSize: '.6rem', fontFamily: "'Syne', sans-serif", fontWeight: 700, padding: '8px 0', borderRadius: 14, border: 'none' }}>Next Verse →</button>
+                </div>
+              </PhoneShell>
+            </Reveal>
+          }
+        />
+      </Container>
+    </Section>
   );
 }
 
+// ── Feature 3 — Lens ──────────────────────────────────────────────────────────
 function FeatureLens() {
-  return (
-    <section id="feat3" className="snap-start py-20 md:py-28 relative overflow-hidden bg-[#0B3D20]">
-      <div className="star-tile absolute inset-0 pointer-events-none bg-fixed" style={{ filter: 'invert(1)', opacity: 0.08 }}></div>
-      <div className="absolute inset-0 pointer-events-none bg-fixed" style={{ background: 'radial-gradient(ellipse 60% 60% at 50% 40%, rgba(200,146,26,.15), transparent 70%)' }}></div>
+  const objects = [
+    { emoji: '🌳', title: 'Tree',     ref: 'Ibrahim 14:24',    quote: '"A good word is like a good tree…"' },
+    { emoji: '🌊', title: 'Ocean',    ref: 'Ar-Rahman 55:19',  quote: '"He released the two seas meeting…"' },
+    { emoji: '🐦', title: 'Bird',     ref: 'An-Nahl 16:79',    quote: '"Do they not see the birds made subject…"' },
+    { emoji: '⛰',  title: 'Mountain', ref: 'An-Naba 78:7',     quote: '"And the mountains as stakes?"' },
+    { emoji: '🐄', title: 'Cow',      ref: 'Al-Baqarah 2:67',  quote: '"Allah commands you to sacrifice a cow."' },
+    { emoji: '☁️', title: 'Sky',      ref: 'Al-Baqarah 2:164', quote: '"In the alternation of night and day…"' },
+  ];
 
-      <div className="max-w-6xl mx-auto px-6 relative z-10">
-        <Reveal variant="blur" className="text-center mb-14">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <span className="w-9 h-9 rounded-full bg-[#C8921A] text-[#0B3D20] font-heading font-extrabold text-sm flex items-center justify-center">3</span>
-            <span className="tag-gold tag text-xs">⭐ The Wow Feature</span>
+  return (
+    <Section id="feat3" bg={T.forest}>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 60% 60% at 50% 40%, rgba(200,146,26,.15), transparent 70%)' }} />
+      <Container>
+        <Reveal variant="blur" style={{ textAlign: 'center', marginBottom: 56 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 16 }}>
+            <span style={{ width: 36, height: 36, borderRadius: '50%', background: T.gold, color: T.forest, fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: '.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>3</span>
+            <span style={tag(true)}>⭐ The Wow Feature</span>
           </div>
-          <h2 className="font-display text-4xl md:text-6xl font-normal text-[#E8C060] leading-tight mb-4">
-            AyahLens <em style={{ fontStyle: 'italic', color: '#F6E8C0' }}>Camera</em>
+          <h2 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 'clamp(2.2rem, 5vw, 3.8rem)', fontWeight: 400, color: T.goldLight, marginBottom: 16 }}>
+            AyahLens <em style={{ fontStyle: 'italic', color: T.goldPale }}>Camera</em>
           </h2>
-          <p className="text-[#F6E8C0]/70 max-w-2xl mx-auto text-sm md:text-base leading-relaxed">
-            Point your camera at anything in the real world. AyahLens uses on-device ML (Google ML Kit — no internet needed) to recognise the object and instantly return the Quran verses that speak to that very creation.
+          <p style={{ color: `${T.goldPale}bb`, maxWidth: 560, margin: '0 auto', fontSize: '.9rem', lineHeight: 1.7 }}>
+            Point your camera at anything in the real world. AyahLens uses on-device ML (Google ML Kit) to recognise the object and instantly return Quran verses that speak to that creation.
           </p>
         </Reveal>
 
-        <div className="grid md:grid-cols-2 gap-14 items-center">
-          <Reveal variant="left" delay={200}>
-            <p className="text-[#E8C060]/60 text-xs font-heading uppercase tracking-widest mb-5">50+ Detected Objects → Instant Ayahs</p>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {[
-                { emoji: '🌳', title: 'Tree', ref: 'Ibrahim 14:24', quote: '"A good word is like a good tree…"' },
-                { emoji: '🌊', title: 'Ocean', ref: 'Ar-Rahman 55:19', quote: '"He released the two seas meeting…"' },
-                { emoji: '🐦', title: 'Bird', ref: 'An-Nahl 16:79', quote: '"Do they not see the birds made subject…"' },
-                { emoji: '⛰', title: 'Mountain', ref: 'An-Naba 78:7', quote: '"And the mountains as stakes?"' },
-                { emoji: '🐄', title: 'Cow', ref: 'Al-Baqarah 2:67', quote: '"Moses said to his people: \'Allah commands...\'"' },
-                { emoji: '☁️', title: 'Sky', ref: 'Al-Baqarah 2:164', quote: '"In the alternation of night and day…"' }
-              ].map(item => (
-                <div key={item.title} className="feat-card p-4" style={{ background: 'rgba(232,192,96,.05)', borderColor: 'rgba(232,192,96,.15)' }}>
-                  <div className="flex items-center gap-2.5 mb-2">
-                    <span className="text-2xl">{item.emoji}</span>
-                    <div><p className="text-[#E8C060] text-xs font-bold">{item.title}</p><p className="text-[#F6E8C0]/60 text-[.6rem]">{item.ref}</p></div>
-                  </div>
-                  <p className="text-[#F6E8C0]/80 text-[.62rem] italic leading-relaxed">{item.quote}</p>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-start gap-3 bg-[#C8921A]/10 border border-[#C8921A]/30 rounded-2xl p-4">
-              <svg className="w-5 h-5 text-[#C8921A] shrink-0 mt-0.5" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <p className="text-[#E8C060] text-xs font-bold mb-0.5">100% On-Device — No Internet Required</p>
-                <p className="text-[#F6E8C0]/70 text-xs leading-relaxed">Google ML Kit runs locally. Your camera never sends data anywhere. Falls back to keyword Quran/Hadith search for unrecognised objects.</p>
-              </div>
-            </div>
-          </Reveal>
-
-          <Reveal variant="zoom" delay={400} className="flex justify-center">
-            <div className="phone w-64 relative" style={{ height: '530px' }}>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-3xl z-10"></div>
-              <div className="h-full flex flex-col">
-                <div className="relative flex-1 bg-fixed" style={{ background: 'linear-gradient(160deg,#050e07,#0d2a14)' }}>
-                  <div className="absolute inset-0 flex items-center justify-center opacity-25 pointer-events-none">
-                    <svg viewBox="0 0 120 80" className="w-32 h-24" fill="#2E9E5A">
-                      <path d="M10 40 Q30 10 60 25 Q90 10 110 40 Q90 35 60 40 Q30 35 10 40z" /><ellipse cx="60" cy="42" rx="8" ry="5" />
-                    </svg>
-                  </div>
-                  <div className="absolute top-7 left-7 w-9 h-9 border-t-2 border-l-2 border-[#C8921A]/60 rounded-tl-xl"></div>
-                  <div className="absolute top-7 right-7 w-9 h-9 border-t-2 border-r-2 border-[#C8921A]/60 rounded-tr-xl"></div>
-                  <div className="absolute bottom-7 left-7 w-9 h-9 border-b-2 border-l-2 border-[#C8921A]/60 rounded-bl-xl"></div>
-                  <div className="absolute bottom-7 right-7 w-9 h-9 border-b-2 border-r-2 border-[#C8921A]/60 rounded-br-xl"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="relative w-20 h-20">
-                      <div className="ring animate-pulse-ring"></div>
-                      <div className="ring animate-pulse-ring2"></div>
-                      <div className="w-full h-full rounded-full border-2 border-[#C8921A]/70 bg-[#C8921A]/10 flex items-center justify-center">
-                        <div className="w-3.5 h-3.5 rounded-full bg-[#C8921A] animate-blink"></div>
+        <TwoCol
+          left={
+            <Reveal variant="left" delay={200}>
+              <p style={{ color: `${T.goldLight}99`, fontSize: '.72rem', fontFamily: "'Syne', sans-serif", textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 20 }}>50+ Detected Objects → Instant Ayahs</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+                {objects.map(obj => (
+                  <div key={obj.title} style={{ ...featCard, padding: 16, background: 'rgba(232,192,96,.05)', borderColor: 'rgba(232,192,96,.15)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <span style={{ fontSize: '1.5rem' }}>{obj.emoji}</span>
+                      <div>
+                        <p style={{ color: T.goldLight, fontSize: '.72rem', fontWeight: 700 }}>{obj.title}</p>
+                        <p style={{ color: `${T.goldPale}99`, fontSize: '.6rem' }}>{obj.ref}</p>
                       </div>
                     </div>
-                  </div>
-                  <div className="absolute top-8 left-1/2 -translate-x-1/2 text-[.48rem] text-[#E8C060]/40 font-heading uppercase tracking-widest whitespace-nowrap">Feature 3 · AyahLens Camera ✨</div>
-                  <div className="absolute top-[4.8rem] left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#0B3D20]/80 backdrop-blur-md text-[#C8921A] text-[.6rem] font-heading font-bold px-3 py-1.5 rounded-full tracking-widest border border-[#C8921A]/40">
-                    🐦 BIRD — 91% match
-                  </div>
-                </div>
-                <div className="bg-[#0B3D20] p-4 border-t border-[#C8921A]/20">
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <div className="w-0.5 h-7 bg-[#C8921A] rounded-full"></div>
-                    <div><p className="text-[#C8921A] text-[.5rem] font-heading font-bold uppercase tracking-widest">Lens Result</p><p className="text-[#F6E8C0]/50 text-[.48rem]">An-Nahl 16:79</p></div>
-                    <span className="ml-auto text-[.5rem] bg-[#2E9E5A]/20 text-[#F6E8C0]/70 px-2 py-0.5 rounded-full font-heading">Why this verse?</span>
-                  </div>
-                  <p className="font-arabic text-[#E8C060] leading-loose text-right mb-1.5" style={{ direction: 'rtl', fontSize: '1.02rem' }}>أَلَمْ يَرَوْاْ إِلَى ٱلطَّيْرِ مُسَخَّرَٰتٍ فِى جَوِّ ٱلسَّمَآءِ</p>
-                  <p className="text-[#F6E8C0]/80 text-[.58rem] italic leading-relaxed">"Do they not see the birds made subject in the atmosphere of the sky?"</p>
-                  <div className="flex gap-2 mt-3">
-                    <button className="flex-1 bg-[#C8921A]/20 border border-[#C8921A]/30 text-[#E8C060] text-[.58rem] py-1.5 rounded-xl font-heading font-semibold">Save ✦</button>
-                    <button className="flex-1 bg-[#2E9E5A]/20 border border-[#2E9E5A]/30 text-[#F6E8C0]/80 text-[.58rem] py-1.5 rounded-xl">Share to Feed</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FeatureCommunity() {
-  return (
-    <section id="feat4" className="snap-start py-20 md:py-28 relative overflow-hidden" style={{ background: '#FAF6EE' }}>
-      <div className="star-tile absolute inset-0 opacity-60 pointer-events-none bg-fixed"></div>
-
-      <div className="max-w-6xl mx-auto px-6 relative z-10">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <Reveal variant="left">
-            <div className="flex items-center gap-3 mb-5">
-              <span className="w-9 h-9 rounded-full bg-[#0B3D20] text-[#E8C060] font-heading font-extrabold text-sm flex items-center justify-center shrink-0">4</span>
-              <span className="tag">Feature 4 of 5</span>
-              <div className="bar"></div>
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl text-[#0B3D20] font-normal leading-tight mb-4">
-              Community<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Feed & Sharing</em>
-            </h2>
-            <p className="text-ink-soft leading-relaxed mb-6 text-sm md:text-base">
-              Share your faith moments with friends and see their journeys in a warm, real-time feed. Not a debate forum — just lived spiritual experiences, shared with love. Built on Firebase Firestore for real-time updates.
-            </p>
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>"My Journey" public or friends-only feed</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Share cards with verse screenshot + context</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Friend system — search by username or phone</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Like + comment on friends' shares</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Powered by Firebase Firestore</li>
-            </ul>
-            <div className="feat-card p-5 max-w-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-full bg-[#0B3D20] flex items-center justify-center text-[#E8C060] font-bold text-sm">ZA</div>
-                <div><p className="text-sm font-semibold text-ink">Zara Aslam</p><p className="text-ink-soft text-xs">Karachi · 2h ago · 🌊 Ocean</p></div>
-              </div>
-              <p className="text-ink-mid text-sm mb-3 leading-relaxed">"Pointed the lens at the sea in Clifton. SubhanAllah this hit different 🌊"</p>
-              <div className="vcard p-3">
-                <p className="font-arabic text-[#0B3D20] text-sm text-right leading-loose" style={{ direction: 'rtl' }}>وَهُوَ ٱلَّذِى سَخَّرَ ٱلْبَحْرَ</p>
-                <p className="text-ink-soft text-xs italic mt-1">"It is He who subjected the sea for you." — An-Nahl 16:14</p>
-              </div>
-              <div className="flex items-center gap-4 mt-3 text-ink-soft text-xs">
-                <button className="hover:text-red-400 transition-colors">❤ 47</button>
-                <button className="hover:text-[#0B3D20] transition-colors">💬 12</button>
-                <button className="ml-auto hover:text-[#C8921A] transition-colors">🔗 Share</button>
-              </div>
-            </div>
-          </Reveal>
-
-          <Reveal variant="zoom" delay={200} className="flex justify-center">
-            <div className="phone w-64 relative" style={{ height: '510px' }}>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-3xl z-10"></div>
-              <div className="h-full flex flex-col p-4 pt-9 gap-2.5 overflow-hidden">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded-full bg-[#C8921A] flex items-center justify-center"><span className="text-[.55rem] font-heading font-extrabold text-[#0B3D20]">4</span></div>
-                  <span className="text-[.55rem] text-[#E8C060]/60 font-heading uppercase tracking-widest">Community Feed</span>
-                </div>
-                {[
-                  { init: 'ZA', bg: 'bg-[#C8921A]', color: 'text-[#0B3D20]', name: 'Zara Aslam', meta: '🌊 Ocean · 2h ago', body: '"SubhanAllah, pointed lens at the sea in Clifton 🌊"', ayah: 'وَهُوَ ٱلَّذِى سَخَّرَ ٱلْبَحْرَ', ref: 'An-Nahl 16:14', likes: 47, comments: 12 },
-                  { init: 'AK', bg: 'bg-[#2E9E5A]', color: 'text-[#F6E8C0]', name: 'Ahmed Khan', meta: 'Mood: Anxious · 5h ago', body: '"Was so stressed before my exam. This ayah calmed me instantly."', ayah: 'فَإِنَّ مَعَ ٱلْعُسْرِ يُسْرًا', ref: 'Ash-Sharh 94:5', likes: 93, comments: 21 },
-                  { init: 'NR', bg: 'bg-[#F6E8C0]', color: 'text-[#0B3D20]', name: 'Nadia Rizvi', meta: '🌸 Flower · Yesterday', body: '"Now I\'ll never look at flowers the same. Alhamdulillah 🌸"', likes: 61, comments: 8 }
-                ].map((post, i) => (
-                  <div key={i} className="bg-[#2E9E5A]/10 border border-[#2E9E5A]/20 rounded-2xl p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-7 h-7 rounded-full ${post.bg} flex items-center justify-center text-[.5rem] font-bold ${post.color}`}>{post.init}</div>
-                      <div><p className="text-[#F6E8C0]/90 text-[.6rem] font-medium">{post.name}</p><p className="text-[#F6E8C0]/50 text-[.5rem]">{post.meta}</p></div>
-                    </div>
-                    <p className="text-[#F6E8C0]/80 text-[.6rem] leading-relaxed mb-2">{post.body}</p>
-                    {post.ayah && (
-                      <div className="vcard p-2">
-                        <p className="font-arabic text-[#E8C060] text-[.8rem] text-right leading-loose" style={{ direction: 'rtl' }}>{post.ayah}</p>
-                        <p className="text-[#F6E8C0]/60 text-[.55rem] italic">{post.ref}</p>
-                      </div>
-                    )}
-                    <div className="flex gap-3 mt-2"><span className="text-[.52rem] text-[#F6E8C0]/50">❤ {post.likes}</span><span className="text-[.52rem] text-[#F6E8C0]/50">💬 {post.comments}</span></div>
+                    <p style={{ color: `${T.goldPale}cc`, fontSize: '.62rem', fontStyle: 'italic', lineHeight: 1.5 }}>{obj.quote}</p>
                   </div>
                 ))}
               </div>
-            </div>
-          </Reveal>
-        </div>
-      </div>
-    </section>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(200,146,26,.1)', border: `1px solid rgba(200,146,26,.3)`, borderRadius: 16, padding: 16 }}>
+                <span style={{ color: T.gold, fontSize: '1.1rem', flexShrink: 0 }}>✓</span>
+                <div>
+                  <p style={{ color: T.goldLight, fontSize: '.75rem', fontWeight: 700, marginBottom: 4 }}>100% On-Device — No Internet Required</p>
+                  <p style={{ color: `${T.goldPale}bb`, fontSize: '.72rem', lineHeight: 1.6 }}>Google ML Kit runs locally. Your camera never sends data anywhere.</p>
+                </div>
+              </div>
+            </Reveal>
+          }
+          right={
+            <Reveal variant="zoom" delay={400}>
+              <div style={{ ...phone, width: 256, height: 530 }}>
+                <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 80, height: 20, background: '#000', borderRadius: '0 0 24px 24px', zIndex: 10 }} />
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ flex: 1, position: 'relative', background: 'linear-gradient(160deg,#050e07,#0d2a14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ position: 'relative', width: 80, height: 80 }}>
+                      {[0, .65].map((d, i) => (
+                        <div key={i} style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: `1.5px solid rgba(200,146,26,.55)`, animation: `pulseRing 2s ease-out ${d}s infinite` }} />
+                      ))}
+                      <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: `2px solid rgba(200,146,26,.7)`, background: 'rgba(200,146,26,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 14, height: 14, borderRadius: '50%', background: T.gold, animation: 'blink 2s ease-in-out infinite' }} />
+                      </div>
+                    </div>
+                    <div style={{ position: 'absolute', top: '-3rem', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', background: 'rgba(11,61,32,.8)', color: T.gold, fontSize: '.6rem', fontFamily: "'Syne', sans-serif", fontWeight: 700, padding: '4px 12px', borderRadius: 100, border: `1px solid rgba(200,146,26,.4)` }}>
+                      🐦 BIRD — 91% match
+                    </div>
+                  </div>
+                  <div style={{ background: T.forest, padding: 16, borderTop: `1px solid rgba(200,146,26,.2)` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <div style={{ width: 2, height: 28, background: T.gold, borderRadius: 2 }} />
+                      <div>
+                        <p style={{ color: T.gold, fontSize: '.5rem', fontFamily: "'Syne', sans-serif", fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase' }}>Lens Result</p>
+                        <p style={{ color: `${T.goldPale}88`, fontSize: '.48rem' }}>An-Nahl 16:79</p>
+                      </div>
+                    </div>
+                    <p style={{ fontFamily: "'Amiri', serif", color: T.goldLight, lineHeight: 2, textAlign: 'right', direction: 'rtl', marginBottom: 6, fontSize: '1.02rem' }}>أَلَمْ يَرَوْاْ إِلَى ٱلطَّيْرِ مُسَخَّرَٰتٍ فِى جَوِّ ٱلسَّمَآءِ</p>
+                    <p style={{ color: `${T.goldPale}cc`, fontSize: '.58rem', fontStyle: 'italic', lineHeight: 1.5 }}>"Do they not see the birds made subject in the atmosphere of the sky?"</p>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                      <button style={{ flex: 1, background: 'rgba(200,146,26,.2)', border: `1px solid rgba(200,146,26,.3)`, color: T.goldLight, fontSize: '.58rem', padding: '6px 0', borderRadius: 14, fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>Save ✦</button>
+                      <button style={{ flex: 1, background: 'rgba(46,158,90,.2)', border: `1px solid rgba(46,158,90,.3)`, color: `${T.goldPale}cc`, fontSize: '.58rem', padding: '6px 0', borderRadius: 14 }}>Share</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          }
+        />
+      </Container>
+    </Section>
   );
 }
 
+// ── Feature 4 — Community ─────────────────────────────────────────────────────
+function FeatureCommunity() {
+  const posts = [
+    { init: 'ZA', bg: T.gold,        color: T.forest,   name: 'Zara Aslam',  meta: '🌊 Ocean · 2h ago',        body: '"SubhanAllah, pointed lens at the sea in Clifton 🌊"',                  ayah: 'وَهُوَ ٱلَّذِى سَخَّرَ ٱلْبَحْرَ',   ref: 'An-Nahl 16:14',  likes: 47, comments: 12 },
+    { init: 'AK', bg: T.forestLight, color: T.goldPale, name: 'Ahmed Khan', meta: 'Mood: Anxious · 5h ago',  body: '"Was so stressed before my exam. This ayah calmed me instantly."',       ayah: 'فَإِنَّ مَعَ ٱلْعُسْرِ يُسْرًا',   ref: 'Ash-Sharh 94:5', likes: 93, comments: 21 },
+  ];
+
+  return (
+    <Section id="feat4" bg={T.cream}>
+      <div style={{ ...starTileBg, position: 'absolute', inset: 0, opacity: .6, pointerEvents: 'none' }} />
+      <Container>
+        <TwoCol
+          left={
+            <Reveal variant="left">
+              <FeatureLabel n="4" label="Feature 4 of 5" />
+              <FeatureTitle line1="Community" em="Feed & Sharing" />
+              <p style={{ color: T.inkSoft, lineHeight: 1.7, marginBottom: 20, fontSize: '.9rem' }}>
+                Share your faith moments with friends and see their journeys in a warm, real-time feed. Built on Firebase Firestore for real-time updates.
+              </p>
+              <BulletList items={[
+                '"My Journey" public or friends-only feed',
+                'Share cards with verse screenshot + context',
+                'Friend system — search by username or phone',
+                'Like + comment on friends\' shares',
+                'Powered by Firebase Firestore',
+              ]} />
+              <div style={{ ...featCard, padding: 20, maxWidth: 320 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: T.forest, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.goldLight, fontWeight: 700, fontSize: '.85rem' }}>ZA</div>
+                  <div>
+                    <p style={{ fontSize: '.85rem', fontWeight: 600, color: T.ink }}>Zara Aslam</p>
+                    <p style={{ fontSize: '.7rem', color: T.inkSoft }}>Karachi · 2h ago · 🌊 Ocean</p>
+                  </div>
+                </div>
+                <p style={{ fontSize: '.85rem', color: T.inkMid, lineHeight: 1.6, marginBottom: 12 }}>"Pointed the lens at the sea in Clifton. SubhanAllah 🌊"</p>
+                <div style={{ ...vcard, padding: 12 }}>
+                  <p style={{ fontFamily: "'Amiri', serif", color: T.forest, fontSize: '.9rem', textAlign: 'right', direction: 'rtl', lineHeight: 2 }}>وَهُوَ ٱلَّذِى سَخَّرَ ٱلْبَحْرَ</p>
+                  <p style={{ color: T.inkSoft, fontSize: '.7rem', fontStyle: 'italic', marginTop: 4 }}>"It is He who subjected the sea for you." — An-Nahl 16:14</p>
+                </div>
+                <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
+                  <button style={{ background: 'none', border: 'none', color: T.inkSoft, fontSize: '.72rem' }}>❤ 47</button>
+                  <button style={{ background: 'none', border: 'none', color: T.inkSoft, fontSize: '.72rem' }}>💬 12</button>
+                  <button style={{ background: 'none', border: 'none', color: T.inkSoft, fontSize: '.72rem', marginLeft: 'auto' }}>🔗 Share</button>
+                </div>
+              </div>
+            </Reveal>
+          }
+          right={
+            <Reveal variant="zoom" delay={200}>
+              <PhoneShell height={510}>
+                <p style={{ fontSize: '.55rem', color: `${T.goldLight}99`, fontFamily: "'Syne', sans-serif", textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 12 }}>Community Feed</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden' }}>
+                  {posts.map((p, i) => (
+                    <div key={i} style={{ background: 'rgba(46,158,90,.1)', border: '1px solid rgba(46,158,90,.2)', borderRadius: 16, padding: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: p.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.5rem', fontWeight: 700, color: p.color }}>{p.init}</div>
+                        <div>
+                          <p style={{ color: `${T.goldPale}ee`, fontSize: '.6rem', fontWeight: 500 }}>{p.name}</p>
+                          <p style={{ color: `${T.goldPale}77`, fontSize: '.5rem' }}>{p.meta}</p>
+                        </div>
+                      </div>
+                      <p style={{ color: `${T.goldPale}cc`, fontSize: '.6rem', lineHeight: 1.5, marginBottom: 8 }}>{p.body}</p>
+                      <div style={{ ...vcard, padding: 8 }}>
+                        <p style={{ fontFamily: "'Amiri', serif", color: T.goldLight, fontSize: '.8rem', textAlign: 'right', direction: 'rtl', lineHeight: 1.9 }}>{p.ayah}</p>
+                        <p style={{ color: `${T.goldPale}99`, fontSize: '.55rem', fontStyle: 'italic' }}>{p.ref}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                        <span style={{ fontSize: '.52rem', color: `${T.goldPale}88` }}>❤ {p.likes}</span>
+                        <span style={{ fontSize: '.52rem', color: `${T.goldPale}88` }}>💬 {p.comments}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </PhoneShell>
+            </Reveal>
+          }
+        />
+      </Container>
+    </Section>
+  );
+}
+
+// ── Feature 5 — Onboarding ────────────────────────────────────────────────────
 function FeatureOnboarding() {
   return (
-    <section id="feat5" className="snap-start py-20 md:py-28 relative overflow-hidden" style={{ background: '#F0E6D0' }}>
-      <div className="absolute inset-0 pointer-events-none bg-fixed" style={{ background: 'url("data:image/svg+xml,%3Csvg width=\'80\' height=\'80\' viewBox=\'0 0 80 80\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' stroke=\'%23C8921A\' stroke-width=\'.4\' opacity=\'.07\'%3E%3Ccircle cx=\'40\' cy=\'40\' r=\'32\'/%3E%3Ccircle cx=\'40\' cy=\'40\' r=\'20\'/%3E%3Cline x1=\'8\' y1=\'40\' x2=\'72\' y2=\'40\'/%3E%3Cline x1=\'40\' y1=\'8\' x2=\'40\' y2=\'72\'/%3E%3Cline x1=\'17\' y1=\'17\' x2=\'63\' y2=\'63\'/%3E%3Cline x1=\'63\' y1=\'17\' x2=\'17\' y2=\'63\'/%3E%3C/g%3E%3C/svg%3E") center/80px' }}></div>
-
-      <div className="max-w-6xl mx-auto px-6 relative z-10">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <Reveal variant="zoom" className="flex justify-center d1">
-            <div className="phone w-64 relative" style={{ height: '510px' }}>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-3xl z-10"></div>
-              <div className="h-full flex flex-col p-5 pt-9">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-full bg-[#C8921A] flex items-center justify-center"><span className="text-[.55rem] font-heading font-extrabold text-[#0B3D20]">5</span></div>
-                  <span className="text-[.58rem] text-[#E8C060]/60 uppercase font-heading tracking-widest">Onboarding & Settings</span>
+    <Section id="feat5" bg={T.parchment}>
+      <Container>
+        <TwoCol
+          reverse
+          left={
+            <Reveal variant="right" delay={200}>
+              <FeatureLabel n="5" label="Feature 5 of 5" />
+              <FeatureTitle line1="Onboarding &" em="Settings" />
+              <p style={{ color: T.inkSoft, lineHeight: 1.7, marginBottom: 20, fontSize: '.9rem' }}>
+                A warm, guided first experience with Koko leading the way. The app personalises immediately from your first interaction.
+              </p>
+              <BulletList items={[
+                'Welcome flow — name, age group, favourite Surah',
+                'Dark / Light mode toggle',
+                'Arabic font choice — Amiri or Scheherazade',
+                '📴 Offline mode — last 50 suggested verses always cached',
+              ]} />
+              <div style={{ ...featCard, padding: 16, maxWidth: 280, display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ fontSize: '2rem' }}>📴</div>
+                <div>
+                  <p style={{ fontSize: '.8rem', fontFamily: "'Syne', sans-serif", fontWeight: 700, color: T.forest, marginBottom: 4 }}>Offline Ready</p>
+                  <p style={{ fontSize: '.72rem', color: T.inkSoft, lineHeight: 1.5 }}>Last 50 verses cached. No signal? No problem.</p>
                 </div>
-                <div className="text-center mb-4">
-                  <div className="flex justify-center mb-2">
-                    <svg viewBox="0 0 60 60" className="w-14 h-14 animate-float" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="30" cy="22" r="14" fill="#8B7355" />
-                      <circle cx="30" cy="24" r="11" fill="#9E8464" />
-                      <circle cx="25" cy="24" r="5" fill="#F5F0E8" /><circle cx="35" cy="24" r="5" fill="#F5F0E8" />
-                      <circle cx="25" cy="24" r="3.5" fill="#C8921A" /><circle cx="35" cy="24" r="3.5" fill="#C8921A" />
-                      <circle cx="25" cy="24" r="1.8" fill="#18120A" /><circle cx="35" cy="24" r="1.8" fill="#18120A" />
-                      <circle cx="23.5" cy="22.5" r=".9" fill="white" /><circle cx="33.5" cy="22.5" r=".9" fill="white" />
-                      <ellipse cx="30" cy="29" rx="2.2" ry="1.3" fill="#c9706a" />
-                      <ellipse cx="20" cy="26" rx="5" ry="3.5" fill="#9E8464" opacity=".5" />
-                      <ellipse cx="40" cy="26" rx="5" ry="3.5" fill="#9E8464" opacity=".5" />
-                      <ellipse cx="19" cy="13" rx="5" ry="4.5" fill="#8B7355" transform="rotate(-18 19 13)" />
-                      <ellipse cx="41" cy="13" rx="5" ry="4.5" fill="#8B7355" transform="rotate(18 41 13)" />
-                      <text x="26" y="10" fontSize="6" fill="#C8921A">✦</text>
-                    </svg>
-                  </div>
-                  <p className="text-[#F6E8C0] text-sm font-medium">Welcome to AyahLens!</p>
-                  <p className="text-[#F6E8C0]/60 text-[.6rem] mt-0.5">I'm Koko — your guide 🌟</p>
+              </div>
+            </Reveal>
+          }
+          right={
+            <Reveal variant="zoom">
+              <PhoneShell height={510}>
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <p style={{ color: T.goldPale, fontSize: '.875rem', fontWeight: 500 }}>Welcome to AyahLens!</p>
+                  <p style={{ color: `${T.goldPale}99`, fontSize: '.6rem', marginTop: 2 }}>I'm Koko — your guide 🌟</p>
                 </div>
-                <div className="bg-[#2E9E5A]/10 border border-[#2E9E5A]/20 rounded-xl px-3 py-2 mb-2.5 flex items-center gap-2">
-                  <span className="text-[.6rem] text-[#F6E8C0]/50">Your name</span>
-                  <div className="flex-1"></div>
-                  <div className="w-0.5 h-3 bg-[#C8921A] animate-blink rounded-full"></div>
+                <div style={{ background: 'rgba(46,158,90,.1)', border: '1px solid rgba(46,158,90,.2)', borderRadius: 12, padding: '8px 12px', marginBottom: 10 }}>
+                  <span style={{ fontSize: '.6rem', color: `${T.goldPale}77` }}>Your name</span>
                 </div>
-                <div className="mb-2.5">
-                  <p className="text-[.55rem] text-[#F6E8C0]/60 mb-1.5">Age group</p>
+                <div style={{ marginBottom: 10 }}>
+                  <p style={{ fontSize: '.55rem', color: `${T.goldPale}99`, marginBottom: 6 }}>Age group</p>
                   <ChipGroup chips={['Under 18', '18-25', '26-35', '35+']} initial="18-25" />
                 </div>
-                <div className="mb-3">
-                  <p className="text-[.55rem] text-[#F6E8C0]/60 mb-1.5">Favourite Surah</p>
-                  <div className="bg-[#2E9E5A]/10 border border-[#2E9E5A]/20 rounded-xl px-3 py-2 flex items-center justify-between">
-                    <span className="text-[#F6E8C0]/90 text-[.62rem]">Al-Fatiha</span>
-                    <svg className="w-3 h-3 text-[#F6E8C0]/50" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth="2"><path d="M3 4.5l3 3 3-3" /></svg>
+                <div style={{ marginBottom: 10 }}>
+                  <p style={{ fontSize: '.55rem', color: `${T.goldPale}99`, marginBottom: 6 }}>Favourite Surah</p>
+                  <div style={{ background: 'rgba(46,158,90,.1)', border: '1px solid rgba(46,158,90,.2)', borderRadius: 12, padding: '8px 12px' }}>
+                    <span style={{ color: `${T.goldPale}ee`, fontSize: '.62rem' }}>Al-Fatiha</span>
                   </div>
                 </div>
-                <div className="flex gap-2 mb-3">
-                  <button className="flex-1 bg-[#2E9E5A]/10 border border-[#2E9E5A]/20 text-[#F6E8C0]/70 text-[.58rem] py-1.5 rounded-xl flex items-center justify-center gap-1">☀️ Light</button>
-                  <button className="flex-1 bg-[#C8921A]/20 border border-[#C8921A]/30 text-[#E8C060] text-[.58rem] py-1.5 rounded-xl flex items-center justify-center gap-1 font-heading font-semibold">🌙 Dark ✓</button>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <button style={{ flex: 1, background: 'rgba(46,158,90,.1)', border: '1px solid rgba(46,158,90,.2)', color: `${T.goldPale}bb`, fontSize: '.58rem', padding: '8px 0', borderRadius: 14 }}>☀️ Light</button>
+                  <button style={{ flex: 1, background: 'rgba(200,146,26,.2)', border: `1px solid rgba(200,146,26,.3)`, color: T.goldLight, fontSize: '.58rem', padding: '8px 0', borderRadius: 14, fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>🌙 Dark ✓</button>
                 </div>
-                <div className="bg-[#2E9E5A]/5 border border-[#2E9E5A]/10 rounded-xl p-2.5 mb-3">
-                  <p className="text-[.52rem] text-[#F6E8C0]/50 mb-1.5">Arabic Font</p>
-                  <div className="flex gap-2">
-                    <div className="flex-1 text-center bg-[#C8921A]/15 border border-[#C8921A]/25 rounded-lg py-1.5">
-                      <p className="font-arabic text-[#E8C060] text-sm">أ</p>
-                      <p className="text-[.48rem] text-[#F6E8C0]/60 mt-0.5">Amiri</p>
+                <div style={{ marginBottom: 12 }}>
+                  <p style={{ fontSize: '.52rem', color: `${T.goldPale}77`, marginBottom: 6 }}>Arabic Font</p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ flex: 1, textAlign: 'center', background: 'rgba(200,146,26,.15)', border: `1px solid rgba(200,146,26,.25)`, borderRadius: 10, padding: '8px 0' }}>
+                      <p style={{ fontFamily: "'Amiri', serif", color: T.goldLight, fontSize: '1.1rem' }}>أ</p>
+                      <p style={{ fontSize: '.48rem', color: `${T.goldPale}99`, marginTop: 2 }}>Amiri</p>
                     </div>
-                    <div className="flex-1 text-center bg-[#2E9E5A]/10 border border-[#2E9E5A]/20 rounded-lg py-1.5">
-                      <p className="font-arabic text-[#F6E8C0]/60 text-sm" style={{ fontFamily: "'Scheherazade New',serif" }}>أ</p>
-                      <p className="text-[.48rem] text-[#F6E8C0]/50 mt-0.5">Scheherazade</p>
+                    <div style={{ flex: 1, textAlign: 'center', background: 'rgba(46,158,90,.1)', border: '1px solid rgba(46,158,90,.2)', borderRadius: 10, padding: '8px 0' }}>
+                      <p style={{ color: `${T.goldPale}88`, fontSize: '1.1rem' }}>أ</p>
+                      <p style={{ fontSize: '.48rem', color: `${T.goldPale}77`, marginTop: 2 }}>Scheherazade</p>
                     </div>
                   </div>
                 </div>
-                <button className="w-full bg-[#C8921A] text-[#0B3D20] text-[.7rem] font-heading font-bold py-2.5 rounded-xl">Start My Journey →</button>
-              </div>
-            </div>
-          </Reveal>
-
-          <Reveal variant="right" delay={200}>
-            <div className="flex items-center gap-3 mb-5">
-              <span className="w-9 h-9 rounded-full bg-[#0B3D20] text-[#E8C060] font-heading font-extrabold text-sm flex items-center justify-center shrink-0">5</span>
-              <span className="tag">Feature 5 of 5</span>
-              <div className="bar"></div>
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl text-[#0B3D20] font-normal leading-tight mb-4">
-              Onboarding &amp;<br /><em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Settings</em>
-            </h2>
-            <p className="text-ink-soft leading-relaxed mb-6 text-sm md:text-base">
-              A warm, guided first experience with Koko leading the way. The app personalises immediately from your first interaction — and gives you full control over your reading environment.
-            </p>
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Welcome flow — name, age group, favourite Surah</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Dark / Light mode toggle</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>Arabic font choice — Amiri or Scheherazade</li>
-              <li className="flex items-start gap-3 text-sm text-ink-mid"><span className="text-[#C8921A] mt-0.5">✦</span>📴 Offline mode — last 50 suggested verses always cached</li>
-            </ul>
-            <div className="flex items-center gap-4 feat-card p-4 max-w-xs">
-              <div className="text-3xl">📴</div>
-              <div>
-                <p className="text-sm font-heading font-bold text-[#0B3D20]">Offline Ready</p>
-                <p className="text-xs text-ink-soft">Last 50 verses cached automatically. No signal? No problem.</p>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </div>
-    </section>
+                <button style={{ width: '100%', background: T.gold, color: T.forest, fontSize: '.7rem', fontFamily: "'Syne', sans-serif", fontWeight: 700, padding: '10px 0', borderRadius: 14, border: 'none' }}>
+                  Start My Journey →
+                </button>
+              </PhoneShell>
+            </Reveal>
+          }
+        />
+      </Container>
+    </Section>
   );
 }
 
+// ── Tech Stack ────────────────────────────────────────────────────────────────
 function TechStack() {
+  const techs = ['⚡ React / Next.js', '🔥 Firebase Firestore', '🎯 Google ML Kit', '📖 alquran.cloud API', '📚 Hadith API', '🤖 Gemini Flash', '🔒 On-device ML'];
   return (
-    <section className="snap-start py-16 relative overflow-hidden bg-[#0B3D20]">
-      <div className="star-tile absolute inset-0 pointer-events-none bg-fixed" style={{ filter: 'invert(1)', opacity: 0.07 }}></div>
-      <div className="max-w-5xl mx-auto px-6 relative z-10 text-center">
-        <Reveal variant="up" as="p" className="text-[#E8C060]/60 text-xs font-heading uppercase tracking-widest mb-8">Built in 7 days with</Reveal>
-        <Reveal variant="blur" delay={200} className="flex flex-wrap justify-center gap-3">
-          {['⚡ React / Next.js', '🔥 Firebase Firestore', '🎯 Google ML Kit', '📖 alquran.cloud API', '📚 fawazahmed0 Hadith API', '🤖 Grok / Gemini Flash', '🔒 On-device ML'].map(tech => (
-            <span key={tech} className={tech.includes('ML Kit') ? "bg-[#C8921A]/20 border border-[#C8921A]/40 text-[#E8C060] text-xs px-4 py-2 rounded-full font-heading font-bold" : "bg-[#2E9E5A]/20 border border-[#2E9E5A]/30 text-[#F6E8C0]/80 text-xs px-4 py-2 rounded-full font-heading"}>
-              {tech}
-            </span>
+    <section style={{ background: T.forest, padding: '60px 0', position: 'relative', overflow: 'hidden' }}>
+      <Container>
+        <Reveal variant="up">
+          <p style={{ textAlign: 'center', color: `${T.goldLight}99`, fontSize: '.72rem', fontFamily: "'Syne', sans-serif", textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 28 }}>
+            Built in 7 days with
+          </p>
+        </Reveal>
+        <Reveal variant="blur" delay={200} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
+          {techs.map(t => (
+            <span key={t} style={{
+              background: t.includes('ML Kit') ? 'rgba(200,146,26,.2)' : 'rgba(46,158,90,.2)',
+              border: `1px solid ${t.includes('ML Kit') ? 'rgba(200,146,26,.4)' : 'rgba(46,158,90,.3)'}`,
+              color: t.includes('ML Kit') ? T.goldLight : `${T.goldPale}cc`,
+              fontSize: '.75rem', padding: '8px 16px', borderRadius: 100,
+              fontFamily: "'Syne', sans-serif", fontWeight: t.includes('ML Kit') ? 700 : 400,
+            }}>{t}</span>
           ))}
         </Reveal>
-      </div>
+      </Container>
     </section>
   );
 }
 
-function KokoSection() {
-  return (
-    <section className="snap-start py-20 relative overflow-hidden" style={{ background: '#FAF6EE' }}>
-      <div className="star-tile absolute inset-0 opacity-60 pointer-events-none bg-fixed"></div>
-      <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-        <Reveal variant="down">
-          <p className="text-[#C8921A] text-xs font-heading uppercase tracking-widest mb-3">✦ Meet Your Guide</p>
-          <h2 className="font-display text-4xl text-[#0B3D20] font-normal mb-8">Say Salam to <em className="text-[#C8921A]" style={{ fontStyle: 'italic' }}>Koko</em></h2>
-        </Reveal>
-        <Reveal variant="zoom" delay={200} className="flex justify-center mb-8">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full opacity-20" style={{ background: 'radial-gradient(ellipse, rgba(200,146,26,.5), transparent 70%)', filter: 'blur(24px)', transform: 'scale(1.6)' }}></div>
-            <svg viewBox="0 0 200 200" className="w-52 h-52 animate-float drop-shadow-2xl" xmlns="http://www.w3.org/2000/svg">
-              <ellipse cx="100" cy="160" rx="46" ry="38" fill="#8B7355" />
-              <ellipse cx="100" cy="168" rx="30" ry="26" fill="#C4A882" />
-              <path d="M146 155 Q170 144 166 124 Q162 106 150 126" fill="#8B7355" stroke="#6B5840" strokeWidth="1.5" />
-              <path d="M149 148 Q168 137 164 120" fill="none" stroke="#6B5840" strokeWidth="2.8" />
-              <circle cx="100" cy="84" r="48" fill="#8B7355" />
-              <circle cx="100" cy="88" r="36" fill="#9E8464" />
-              <path d="M80 62 Q84 52 88 60" fill="none" stroke="#6B5840" strokeWidth="3" strokeLinecap="round" />
-              <path d="M116 62 Q120 52 124 60" fill="none" stroke="#6B5840" strokeWidth="3" strokeLinecap="round" />
-              <path d="M97 54 Q100 44 103 54" fill="none" stroke="#6B5840" strokeWidth="2.2" />
-              <ellipse cx="66" cy="50" rx="16" ry="14" fill="#8B7355" transform="rotate(-20 66 50)" />
-              <ellipse cx="134" cy="50" rx="16" ry="14" fill="#8B7355" transform="rotate(20 134 50)" />
-              <ellipse cx="66" cy="50" rx="8" ry="7" fill="#c9a070" transform="rotate(-20 66 50)" />
-              <ellipse cx="134" cy="50" rx="8" ry="7" fill="#c9a070" transform="rotate(20 134 50)" />
-              <circle cx="84" cy="88" r="14" fill="#F5F0E8" />
-              <circle cx="116" cy="88" r="14" fill="#F5F0E8" />
-              <circle cx="84" cy="88" r="10" fill="#C8921A" />
-              <circle cx="116" cy="88" r="10" fill="#C8921A" />
-              <circle cx="84" cy="88" r="5.5" fill="#18120A" />
-              <circle cx="116" cy="88" r="5.5" fill="#18120A" />
-              <circle cx="80" cy="84" r="2.5" fill="white" />
-              <circle cx="112" cy="84" r="2.5" fill="white" />
-              <ellipse cx="100" cy="100" rx="6" ry="4" fill="#c9706a" />
-              <path d="M91 108 Q100 115 109 108" fill="none" stroke="#9a5a58" strokeWidth="2" strokeLinecap="round" />
-              <line x1="44" y1="96" x2="82" y2="102" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8" />
-              <line x1="40" y1="106" x2="82" y2="106" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8" />
-              <line x1="118" y1="102" x2="156" y2="96" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8" />
-              <line x1="118" y1="106" x2="160" y2="106" stroke="#e8e0d0" strokeWidth="1.8" opacity=".8" />
-              <ellipse cx="62" cy="100" rx="18" ry="13" fill="#9E8464" opacity=".5" />
-              <ellipse cx="138" cy="100" rx="18" ry="13" fill="#9E8464" opacity=".5" />
-              <rect x="72" y="172" rx="5" ry="5" width="56" height="36" fill="#0B3D20" />
-              <rect x="76" y="176" rx="3" ry="3" width="48" height="28" fill="#1B6B3C" />
-              <line x1="100" y1="178" x2="100" y2="202" stroke="#C8921A" strokeWidth="1.2" />
-              <line x1="84" y1="184" x2="116" y2="184" stroke="#C8921A" strokeWidth=".7" opacity=".6" />
-              <line x1="84" y1="190" x2="116" y2="190" stroke="#C8921A" strokeWidth=".7" opacity=".6" />
-              <line x1="84" y1="196" x2="116" y2="196" stroke="#C8921A" strokeWidth=".7" opacity=".6" />
-              <text x="86" y="35" fontSize="14" fill="#C8921A">✦</text>
-              <text x="108" y="30" fontSize="9" fill="#E8C060" opacity=".7">✦</text>
-              <text x="74" y="44" fontSize="7" fill="#C8921A" opacity=".5">✦</text>
-            </svg>
-          </div>
-        </Reveal>
-        <Reveal variant="up" delay={400} className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-          <div className="feat-card p-5 text-left">
-            <div className="text-2xl mb-3">😸</div>
-            <p className="font-heading font-bold text-sm text-[#0B3D20] mb-2">Pallas's Cat</p>
-            <p className="text-xs text-ink-soft leading-relaxed">Flat 2D illustrated style. Large golden eyes, wide-set ears, cheek fluff — nature's most expressive cat, now holding a Quran.</p>
-          </div>
-          <div className="feat-card p-5 text-left">
-            <div className="text-2xl mb-3">🌟</div>
-            <p className="font-heading font-bold text-sm text-[#0B3D20] mb-2">Like Duolingo's Owl</p>
-            <p className="text-xs text-ink-soft leading-relaxed">Celebrates every milestone, sends gentle nudges, adapts to your mood — never pushy, always warm.</p>
-          </div>
-          <div className="feat-card p-5 text-left">
-            <div className="text-2xl mb-3">🤲</div>
-            <p className="font-heading font-bold text-sm text-[#0B3D20] mb-2">Islamically Grounded</p>
-            <p className="text-xs text-ink-soft leading-relaxed">Celebrates with duas, not just points. Reminds you with kindness, not guilt. Designed with Islamic values at the core.</p>
-          </div>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
+// ── CTA ───────────────────────────────────────────────────────────────────────
 function DownloadCTA() {
+  const btns = [
+    { icon: '🍎', sub: 'Download on the', label: 'App Store' },
+    { icon: '▶',  sub: 'Get it on',        label: 'Google Play' },
+  ];
   return (
-    <section id="download" className="snap-start py-24 md:py-32 text-center relative overflow-hidden bg-[#0B3D20]">
-      <div className="star-tile absolute inset-0 pointer-events-none bg-fixed" style={{ filter: 'invert(1)', opacity: 0.07 }}></div>
-      <div className="absolute inset-0 pointer-events-none bg-fixed" style={{ background: 'radial-gradient(ellipse 55% 50% at 50% 50%, rgba(200,146,26,.1), transparent 70%)' }}></div>
+    <section style={{ background: T.forest, padding: '80px 0', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 55% 50% at 50% 50%, rgba(200,146,26,.1), transparent 70%)' }} />
+      <Container>
 
-      <div className="max-w-2xl mx-auto px-6 relative z-10">
-        <Reveal variant="down" className="font-arabic text-2xl text-[#C8921A]/35 mb-5" style={{ direction: 'rtl' }}>ٱقْرَأْ بِٱسْمِ رَبِّكَ</Reveal>
-        <Reveal variant="blur" delay={200} className="flex justify-center mb-4">
-          <span className="hack-badge flex items-center gap-2 bg-[#C8921A]/10 border border-[#C8921A]/30 text-[#E8C060] text-xs font-heading font-semibold px-4 py-2 rounded-full">
-            🚀 Hackathon Demo — Open for Judging
-          </span>
+        <Reveal variant="blur">
+          <p style={{ fontFamily: "'Amiri', serif", fontSize: '1.5rem', color: `${T.gold}55`, marginBottom: 20, direction: 'rtl' }}>
+            ٱقْرَأْ بِٱسْمِ رَبِّكَ
+          </p>
         </Reveal>
-        <Reveal variant="zoom" delay={400} as="h2" className="font-display text-5xl md:text-6xl font-normal text-[#E8C060] leading-tight mb-5">
-          Try AyahLens<br /><em style={{ fontStyle: 'italic', color: '#F6E8C0' }}>today.</em>
+
+        {/* CTA headline — wrapped in div, NOT using `as` prop */}
+        <Reveal variant="zoom" delay={200} style={{ marginBottom: 20 }}>
+          <h2 style={{
+            fontFamily: "'Instrument Serif', serif",
+            fontSize: 'clamp(2.5rem, 5vw, 3.8rem)',
+            fontWeight: 400, color: T.goldLight, lineHeight: 1.1,
+          }}>
+            Try AyahLens<br />
+            <em style={{ fontStyle: 'italic', color: T.goldPale }}>today.</em>
+          </h2>
         </Reveal>
-        <Reveal variant="up" delay={600} as="p" className="text-[#F6E8C0]/70 mb-10 leading-relaxed text-sm md:text-base max-w-lg mx-auto">
-          All 5 features. Demo-ready. Built in a week for a hackathon — with genuine love for the Muslim community.
+
+        <Reveal variant="up" delay={400} style={{ marginBottom: 40 }}>
+          <p style={{ color: `${T.goldPale}bb`, lineHeight: 1.7, fontSize: '.9rem', maxWidth: 480, margin: '0 auto' }}>
+            All 5 features. Demo-ready. Built in a week for a hackathon — with genuine love for the Muslim community.
+          </p>
         </Reveal>
-        <Reveal variant="blur" delay={800} className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-          <a href="#" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-[#1B6B3C] text-[#E8C060] border border-[#C8921A]/30 px-6 py-4 rounded-2xl hover:bg-[#2E9E5A] transition-all hover:-translate-y-1 shadow-xl">
-            <div className="text-3xl">🍎</div>
-            <div className="text-left"><div className="text-xs text-[#F6E8C0]/70">Download on the</div><div className="font-heading font-bold text-base">App Store</div></div>
-          </a>
-          <a href="#" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-[#1B6B3C] text-[#E8C060] border border-[#C8921A]/30 px-6 py-4 rounded-2xl hover:bg-[#2E9E5A] transition-all hover:-translate-y-1 shadow-xl">
-            <div className="text-3xl">▶</div>
-            <div className="text-left"><div className="text-xs text-[#F6E8C0]/70">Get it on</div><div className="font-heading font-bold text-base">Google Play</div></div>
-          </a>
+
+        <Reveal variant="blur" delay={600} style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center', marginBottom: 32 }}>
+          {btns.map(btn => (
+            <a
+              key={btn.label}
+              href="#"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 16,
+                background: T.forestMid, color: T.goldLight,
+                border: `1px solid rgba(200,146,26,.3)`,
+                padding: '16px 24px', borderRadius: 16,
+                textDecoration: 'none', transition: 'all .2s',
+                boxShadow: '0 8px 24px rgba(0,0,0,.2)',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = T.forestLight; e.currentTarget.style.transform = 'translateY(-4px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = T.forestMid;  e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <span style={{ fontSize: '1.8rem' }}>{btn.icon}</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '.7rem', color: `${T.goldPale}bb` }}>{btn.sub}</div>
+                <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: '1rem' }}>{btn.label}</div>
+              </div>
+            </a>
+          ))}
         </Reveal>
-        <Reveal variant="up" delay={1000} className="flex flex-wrap items-center justify-center gap-4 text-[#F6E8C0]/40 text-xs">
-          <span>✦ Free to start</span><span>·</span><span>✦ No ads</span><span>·</span><span>✦ On-device ML</span><span>·</span><span>✦ Firebase backend</span>
+
+        <Reveal variant="up" delay={800} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 12, color: `${T.goldPale}66`, fontSize: '.72rem' }}>
+          {['Free to start', 'No ads', 'On-device ML', 'Firebase backend'].map((t, i) => (
+            <React.Fragment key={t}>
+              {i > 0 && <span>·</span>}
+              <span>✦ {t}</span>
+            </React.Fragment>
+          ))}
         </Reveal>
-      </div>
+
+      </Container>
     </section>
   );
 }
 
+// ── Footer ────────────────────────────────────────────────────────────────────
 function Footer() {
   return (
-    <footer className="snap-start py-8 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-[#C8921A]/10 bg-[#0B3D20]">
-      <div className="font-heading font-bold text-[#E8C060] text-lg">AyahLens ✦</div>
-      <div className="text-[#F6E8C0]/40 text-xs text-center">Built with ❤️ for the Muslim community · Hackathon 2026</div>
-      <div className="font-arabic text-[#C8921A]/30 text-base" style={{ direction: 'rtl' }}>بِسْمِ ٱللَّهِ</div>
+    <footer style={{
+      background: T.forest, padding: '24px 40px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      borderTop: `1px solid rgba(200,146,26,.1)`, flexWrap: 'wrap', gap: 12,
+    }}>
+      <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, color: T.goldLight, fontSize: '1.1rem' }}>AyahLens ✦</span>
+      <span style={{ color: `${T.goldPale}66`, fontSize: '.72rem' }}>Built with ❤️ for the Muslim community · Hackathon 2026</span>
+      <span style={{ fontFamily: "'Amiri', serif", color: `${T.gold}66`, direction: 'rtl' }}>بِسْمِ ٱللَّهِ</span>
     </footer>
   );
 }
 
-// ==========================================
-// 5. MAIN EXPORT
-// ==========================================
+// ── Root export ───────────────────────────────────────────────────────────────
 export default function Landing() {
-  const navigate = useNavigate();
   return (
-    <div className="font-body text-ink overflow-x-hidden" style={{ background: '#FAF6EE' }}>
-      <style dangerouslySetInnerHTML={{ __html: customStyles }} />
+    <div style={{ fontFamily: "'DM Sans', sans-serif", color: T.ink, overflowX: 'hidden', background: T.cream }}>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       <CustomCursor />
       <Navbar />
       <main>
@@ -1036,7 +1102,6 @@ export default function Landing() {
         <FeatureCommunity />
         <FeatureOnboarding />
         <TechStack />
-        <KokoSection />
         <DownloadCTA />
       </main>
       <Footer />
