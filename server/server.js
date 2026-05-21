@@ -77,18 +77,22 @@ app.use((err, req, res, next) => {
 });
 
 // ─── Start ──────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n🕌 AyahLens Backend running on http://localhost:${PORT}`);
-  console.log(`📖 QF Content API: ${process.env.QF_CONTENT_BASE}`);
-  console.log(`🔐 QF OAuth: ${process.env.QF_OAUTH_URL}`);
-  console.log(`🤖 Gemini AI: ${process.env.GEMINI_API_KEY ? 'Enabled' : 'Disabled'}`);
-  console.log(`\nEndpoints:`);
-  console.log(`  GET  /api/health`);
-  console.log(`  GET  /api/chapters`);
-  console.log(`  GET  /api/verses/by_key/:key`);
-  console.log(`  GET  /api/mood/verse-of-day`);
-  console.log(`  POST /api/mood/match`);
-  console.log(`  POST /api/lens/match`);
-  console.log(`  GET  /api/community/posts`);
-  console.log(`  GET  /api/challenges/today\n`);
-});
+export default app;
+
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`\n🕌 AyahLens Backend running on http://localhost:${PORT}`);
+    console.log(`📖 QF Content API: ${process.env.QF_CONTENT_BASE}`);
+    console.log(`🔐 QF OAuth: ${process.env.QF_OAUTH_URL}`);
+    console.log(`🤖 Gemini AI: ${process.env.GEMINI_API_KEY ? 'Enabled' : 'Disabled'}`);
+    console.log(`\nEndpoints:`);
+    console.log(`  GET  /api/health`);
+    console.log(`  GET  /api/chapters`);
+    console.log(`  GET  /api/verses/by_key/:key`);
+    console.log(`  GET  /api/mood/verse-of-day`);
+    console.log(`  POST /api/mood/match`);
+    console.log(`  POST /api/lens/match`);
+    console.log(`  GET  /api/community/posts`);
+    console.log(`  GET  /api/challenges/today\n`);
+  });
+}
