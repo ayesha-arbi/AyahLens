@@ -16,6 +16,8 @@ export default function ReadingJourney() {
   const [reflection, setReflection]           = useState("");
   const [playing, setPlaying]                 = useState(false);
   const [showReflection, setShowReflection]   = useState(false);
+  const [audioByVerseKey, setAudioByVerseKey] = useState({});
+  const [audioError, setAudioError]           = useState("");
   
   const audioRef = useRef(null);
 
@@ -40,14 +42,31 @@ export default function ReadingJourney() {
   // Load verses when chapter changes
   useEffect(() => {
     setLoadingVerses(true);
-    // Request audio=7 (Mishary Alafasy) along with text
-    apiFetch(`/api/verses/by_chapter/${selectedChapter}?fields=text_uthmani&audio=7&per_page=10`)
-      .then((data) => {
-        setVerses(data?.verses || []);
+    setAudioByVerseKey({});
+    setAudioError("");
+
+    Promise.all([
+      apiFetch(`/api/verses/by_chapter/${selectedChapter}?fields=text_uthmani&per_page=10`),
+      apiFetch(`/api/audio/7/by_chapter/${selectedChapter}`).catch(() => null),
+    ])
+      .then(([verseData, audioData]) => {
+        const nextVerses = verseData?.verses || [];
+        const audioFiles = audioData?.audio_files || [];
+        const nextAudioByVerseKey = Object.fromEntries(
+          audioFiles
+            .filter((file) => file.verse_key && file.url)
+            .map((file) => [file.verse_key, file.url])
+        );
+
+        setVerses(nextVerses);
+        setAudioByVerseKey(nextAudioByVerseKey);
         setVerseIdx(0);
         setMarkedRead([]);
       })
-      .catch(() => setVerses([]))
+      .catch(() => {
+        setVerses([]);
+        setAudioByVerseKey({});
+      })
       .finally(() => setLoadingVerses(false));
   }, [selectedChapter]);
 
@@ -58,22 +77,54 @@ export default function ReadingJourney() {
   // Stop audio when verse changes
   useEffect(() => {
     setPlaying(false);
+    setAudioError("");
     if (audioRef.current) {
       audioRef.current.pause();
     }
   }, [verseIdx, selectedChapter]);
 
+  const getAudioUrl = (currentVerse) => {
+    if (!currentVerse) return "";
+
+    const quranComUrl = currentVerse.audio?.url || audioByVerseKey[currentVerse.verse_key];
+    if (quranComUrl) {
+      return quranComUrl.startsWith("http")
+        ? quranComUrl
+        : `https://verses.quran.com/${quranComUrl}`;
+    }
+
+    // Fallback: Islamic Network uses the global ayah number.
+    if (currentVerse.id) {
+      return `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${currentVerse.id}.mp3`;
+    }
+
+    return "";
+  };
+
   // Handle actual audio playback
   useEffect(() => {
-    if (playing && verse?.audio?.url) {
-      const audioUrl = `https://verses.quran.com/${verse.audio.url}`;
+    if (playing) {
+      const audioUrl = getAudioUrl(verse);
+
+      if (!audioUrl) {
+        setAudioError("Audio is unavailable for this verse.");
+        setPlaying(false);
+        return;
+      }
+
+      setAudioError("");
       if (!audioRef.current || audioRef.current.src !== audioUrl) {
         if (audioRef.current) audioRef.current.pause();
         audioRef.current = new Audio(audioUrl);
         audioRef.current.onended = () => setPlaying(false);
+        audioRef.current.onerror = () => {
+          setAudioError("Could not load this recitation. Please try the next verse.");
+          setPlaying(false);
+        };
       }
       audioRef.current.play().catch(e => {
         console.error("Audio playback error:", e);
+        setAudioError("Your browser blocked or could not load the audio.");
         setPlaying(false);
       });
     } else {
@@ -81,7 +132,7 @@ export default function ReadingJourney() {
         audioRef.current.pause();
       }
     }
-  }, [playing, verse]);
+  }, [playing, verse, audioByVerseKey]);
   const progress = verses.length ? Math.round(((verseIdx + 1) / verses.length) * 100) : 0;
 
   const handleMarkRead = () => {
@@ -167,6 +218,11 @@ export default function ReadingJourney() {
                        <div style={{ height: "100%", background: "var(--gold)", width: playing ? "60%" : "0%", transition: "width 0.3s" }} />
                     </div>
                   </div>
+                  {audioError && (
+                    <p style={{ fontSize: 12, color: "#c0392b", marginTop: -14, marginBottom: 10 }}>
+                      {audioError}
+                    </p>
+                  )}
                 </>
               ) : (
                 <p style={{ fontSize: 15, color: "var(--ink-soft)" }}>Select a surah to begin your journey.</p>
