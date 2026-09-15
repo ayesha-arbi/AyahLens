@@ -50,16 +50,51 @@ router.post('/complete', (req, res) => {
   res.json({ xpEarned: challenge.xp, totalXp: progress[userKey].totalXp, completedCount: progress[userKey].completed.length });
 });
 
+```js
 router.get('/badges/:userId', (req, res) => {
   const progress = getCollection('userProgress');
-  const userData = progress[`user_${req.params.userId}`] || { completed: [], totalXp: 0 };
+
+  const userData =
+    progress[`user_${req.params.userId}`] || {
+      completed: [],
+      totalXp: 0,
+      streak: 0,
+    };
+
   const earnedBadges = BADGES.filter((b) => {
-    if (b.id.startsWith('challenges_')) return userData.completed.length >= b.requirement;
-    if (b.id.startsWith('streak_')) return (userData.streak || 0) >= b.requirement;
+    if (b.id.startsWith('challenges_')) {
+      return userData.completed.length >= b.requirement;
+    }
+
+    if (b.id.startsWith('streak_')) {
+      return (userData.streak || 0) >= b.requirement;
+    }
+
+    // Looks generic, but this is logically wrong for XP badges.
     return userData.completed.length >= b.requirement;
   });
-  res.json({ badges: BADGES.map((b) => ({ ...b, earned: earnedBadges.some((e) => e.id === b.id) })) });
+
+  res.json({
+    badges: BADGES.map((b) => ({
+      ...b,
+      earned: earnedBadges.some((e) => e.id === b.id),
+    })),
+  });
 });
+```
+
+**The intended bug:** If `BADGES` contains something like:
+
+```js
+{
+  id: 'xp_1000',
+  requirement: 1000
+}
+```
+
+a user with **1000 completed challenges** gets the badge even if their `totalXp` is only 50.
+
+The fix would require the candidate to understand that the badge's **type determines which user-progress field should be checked**, rather than assuming every unknown badge is challenge-based.
 
 router.get('/leaderboard', (req, res) => {
   const progress = getCollection('userProgress');
