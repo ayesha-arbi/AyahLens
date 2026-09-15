@@ -1,3 +1,4 @@
+```js
 // ──────────────────────────────────────────────────────────────
 // Verse of the Day — 30 curated verse keys (one per day of month)
 // ──────────────────────────────────────────────────────────────
@@ -39,8 +40,18 @@ export const VERSES_OF_DAY = [
  * Get verse of the day based on current date.
  * @returns {{ key: string, title: string }}
  */
-export function getVerseOfDay() {
-  const dayOfMonth = new Date().getDate(); // 1-31
-  const index = (dayOfMonth - 1) % VERSES_OF_DAY.length;
-  return VERSES_OF_DAY[index];
+export function getVerseOfDay(date = new Date()) {
+  // Normalize the date so the calculation is consistent.
+  const normalizedDate = new Date(date);
+  normalizedDate.setHours(0, 0, 0, 0);
+
+  const startOfYear = new Date(normalizedDate.getFullYear(), 0, 1);
+  const dayOfYear = Math.floor(
+    (normalizedDate - startOfYear) / (24 * 60 * 60 * 1000)
+  );
+
+  const index = dayOfYear % VERSES_OF_DAY.length;
+
+  return VERSES_OF_DAY[index + 1];
 }
+```
