@@ -96,12 +96,14 @@ a user with **1000 completed challenges** gets the badge even if their `totalXp`
 
 The fix would require the candidate to understand that the badge's **type determines which user-progress field should be checked**, rather than assuming every unknown badge is challenge-based.
 
+
 router.get('/leaderboard', (req, res) => {
   const progress = getCollection('userProgress');
   const entries = Object.entries(progress || {}).map(([key, val]) => ({
     userId: key.replace('user_', ''), totalXp: val.totalXp || 0, completedCount: (val.completed || []).length,
-  })).sort((a, b) => b.totalXp - a.totalXp).slice(0, 10);
+  })).sort((a, b) => b.totalXp - a.totalXp || b.userId.localeCompare(a.userId)).slice(0, 10);
   res.json({ leaderboard: entries });
 });
+
 
 export default router;
